@@ -327,8 +327,10 @@ function getUIElement() {
 
   var restartBtn = document.getElementById("restart-button");
   restartBtn.onclick = function () {
+    isDemoRunning = false;
     userRestart = true;
     restartGame();
+    enableAllButton();
   };
 
   var demoBtn = document.getElementById("demo-button");
@@ -357,28 +359,71 @@ function getUIElement() {
   ); // This is the most important part!
 }
 
+// function letGoGrip() {
+//   const grabButton = document.getElementById("grab-button");
+//   isBallHeld = false;
+//   isFalling = true;
+//   isAnimationRunning = true; // Set once
+//   animationPhase = ST_DROPPING; // Set once
+
+//   // Capture the exact world position of the ball the moment it was let go
+//   ballCurrentPos = vec3(
+//     ballModelViewMatrix[0][3],
+//     ballModelViewMatrix[1][3],
+//     ballModelViewMatrix[2][3]
+//   );
+//   // IMPORTANT: This allows you to pick it up again!
+//   BallPosX = ballCurrentPos[0];
+//   BallPosY = ballCurrentPos[1];
+//   BallPosZ = ballCurrentPos[2];
+//   isBallHeld = false;
+//   grabButton.innerText = "Grab Ball";
+
+//   GripControl(innerGripSlider, outerGripSlider);
+// }
+
 function letGoGrip() {
   const grabButton = document.getElementById("grab-button");
   isBallHeld = false;
   isFalling = true;
-  isAnimationRunning = true; // Set once
-  animationPhase = ST_DROPPING; // Set once
+  isAnimationRunning = true;
+  animationPhase = ST_DROPPING;
 
-  // Capture the exact world position of the ball the moment it was let go
+  // FIXED: Extract world position by removing view rotation influence
+  // When ball is held, ballModelViewMatrix = wristMatrix * translate(0, CLAW_CENTER*0.5, 0)
+  // wristMatrix already includes viewRotationX and viewRotationY at the beginning
+  
+  // Method 1: Rebuild the position without view rotations
+  let worldMatrix = mat4();
+  worldMatrix = mult(worldMatrix, translate(robotPosX, -5.0, 0.0));
+  worldMatrix = mult(worldMatrix, rotateY(theta[BASE_BODY]));
+  worldMatrix = mult(worldMatrix, translate(0.0, BASE_HEIGHT, 0.0));
+  worldMatrix = mult(worldMatrix, rotateZ(theta[UPPER_ARM]));
+  worldMatrix = mult(worldMatrix, translate(0.0, UARM_HEIGHT, 0.0));
+  worldMatrix = mult(worldMatrix, rotateZ(theta[LOWER_ARM]));
+  worldMatrix = mult(worldMatrix, translate(0.0, LARM_HEIGHT, 0.0));
+  worldMatrix = mult(worldMatrix, rotateY(theta[WRIST_Z]));
+  worldMatrix = mult(worldMatrix, translate(0.0, WRIST_SPHERE_RADIUS, 0.0));
+  worldMatrix = mult(worldMatrix, translate(0.0, CLAW_CENTER * 0.5, 0.0));
+  
+  // Extract true world position
   ballCurrentPos = vec3(
-    ballModelViewMatrix[0][3],
-    ballModelViewMatrix[1][3],
-    ballModelViewMatrix[2][3]
+    worldMatrix[0][3],
+    worldMatrix[1][3],
+    worldMatrix[2][3]
   );
-  // IMPORTANT: This allows you to pick it up again!
+  
   BallPosX = ballCurrentPos[0];
   BallPosY = ballCurrentPos[1];
   BallPosZ = ballCurrentPos[2];
-  isBallHeld = false;
+  
   grabButton.innerText = "Grab Ball";
 
   GripControl(innerGripSlider, outerGripSlider);
+  
+  console.log("Ball released at world position:", BallPosX, BallPosY, BallPosZ);
 }
+
 
 function gripBall() {
   const grabButton = document.getElementById("grab-button");
@@ -821,7 +866,7 @@ function disableAllButton() {
   var wrist = document.getElementById("wrist-z-slider");
   var grabBut = document.getElementById("grab-button");
   var demoBut = document.getElementById("demo-button");
-  var restartBut = document.getElementById("restart-button");
+  
 
   baseSlider.disabled = true;
   robotX.disabled = true;
@@ -832,7 +877,7 @@ function disableAllButton() {
   wrist.disabled = true;
   grabBut.disabled = true;
   demoBut.disabled = true;
-  restartBut.disabled = true;
+
 }
 
 function enableAllButton() {
@@ -906,6 +951,8 @@ function enableAllButton() {
 // }
 
 function releaseBall() {
+
+  fetchBallLocation();
   rotateGrip();
 
   // Apply gravity to velocity
@@ -1260,6 +1307,13 @@ function userRestartGame() {
   personalRecord = 0;
   gameStatusShowText = "Lets start the game";
 
+  // Reset viewing angle to original position
+  viewRotationX = 0;
+  viewRotationY = 0;
+  
+  // Reset zoom to original
+  zoomObject = 1.0;
+
   var personalBestText = document.getElementById("game-personal-best-text");
   // personalBestText.innerHTML = 0;
   if (personalBestText) personalBestText.innerHTML = 0;
@@ -1385,11 +1439,13 @@ const demoTargets = {
 function startDemo() {
   isDemoRunning = true;
   demoAnimationPhase = DEMO_ST_MOVE_ROBOT;
+  disableAllButton(); // Disable controls immediately when demo starts
   requestAnimationFrame(demo);
 }
 
 // Main demo animation function with switch case
 function demo() {
+
   if (!isDemoRunning) return;
 
   switch (demoAnimationPhase) {
@@ -1602,7 +1658,6 @@ function demo() {
   // Continue animation loop
   if (isDemoRunning) {
     requestAnimationFrame(demo);
-    setTimeout(disableAllButton, 5000);
   }
 }
 
@@ -1619,6 +1674,12 @@ function updateSlider(sliderId, value, textId) {
 function stopDemo() {
   isDemoRunning = false;
   demoAnimationPhase = DEMO_ST_IDLE;
+}
+
+function fetchBallLocation() {
+  BallPosX = ballCurrentPos[0];
+  BallPosY = ballCurrentPos[1];
+  BallPosZ = ballCurrentPos[2];
 }
 
 /*-----------------------------------------------------------------------------------*/
