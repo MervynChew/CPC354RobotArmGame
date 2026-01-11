@@ -1161,13 +1161,9 @@ function rotateGrip() {
   }
 }
 
-function openGrip() {}
-
 function getBallSide() {
   // 1. Get Ball World Position (using your existing logic)
-  var ballMV = mult(
-    mult(rotateX(viewRotationX), rotateY(viewRotationY)),
-    translate(ballCurrentPos[0], ballCurrentPos[1], ballCurrentPos[2])
+  var ballMV = mult(mult(rotateX(viewRotationX), rotateY(viewRotationY)), translate(ballCurrentPos[0], ballCurrentPos[1], ballCurrentPos[2])
   );
   var ballWorldPos = vec4(ballMV[0][3], ballMV[1][3], ballMV[2][3], 1.0);
 
@@ -1195,9 +1191,7 @@ function getBallSide() {
  */
 function checkGripCenterCollision() {
   // 1. BALL WORLD POSITION
-  var ballMV = mult(
-    mult(rotateX(viewRotationX), rotateY(viewRotationY)),
-    translate(BallPosX, BallPosY, BallPosZ)
+  var ballMV = mult(mult(rotateX(viewRotationX), rotateY(viewRotationY)), translate(BallPosX, BallPosY, BallPosZ)
   );
 
   const ballX = ballMV[0][3];
@@ -1215,14 +1209,10 @@ function checkGripCenterCollision() {
   var side = getBallSide();
 
   if (side == 1) {
-    var gripCenterMatrix = mult(
-      wristMatrix,
-      translate(1.0, OUTERUPPER_GRIP_HEIGHT * 1.6, 0.0)
+    var gripCenterMatrix = mult(wristMatrix, translate(1.0, OUTERUPPER_GRIP_HEIGHT * 1.6, 0.0)
     );
   } else {
-    var gripCenterMatrix = mult(
-      wristMatrix,
-      translate(-1.0, OUTERUPPER_GRIP_HEIGHT * 1.6, 0.0)
+    var gripCenterMatrix = mult(wristMatrix, translate(-1.0, OUTERUPPER_GRIP_HEIGHT * 1.6, 0.0)
     );
   }
 
@@ -1416,23 +1406,6 @@ function updateUI() {
   updateScoreDisplay();
 }
 
-
-// function demo() {
-//   robotPosX = -4;
-//   draw();
-//   theta[UPPER_ARM] = 59;
-//   draw();
-//   theta[LOWER_ARM] = 64;
-//   draw();
-//   theta[INNER_UPPER_GRIPPER] = 81;
-//   draw();
-//   theta[INNER_BOTTOM_GRIPPER] = -81;
-//   draw();
-//   theta[OUTER_UPPER_GRIPPER] = -66;
-//   draw();
-//   theta[OUTER_BOTTOM_GRIPPER] = 66;
-//   draw();
-// }
 
 // Here try demo
 // Demo animation states
