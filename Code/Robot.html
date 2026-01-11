@@ -1,164 +1,230 @@
 <!DOCTYPE html>
 <html lang="en">
 
+
 <head>
-	<meta charset="utf-8">
-	<title>CPC354 Demo</title>
+  <meta charset="utf-8">
+  <title>CPC354 Demo</title>
 
-	<!-- Link CSS, JS, and WebGL -->
-	<!-- webgl-utils.js	: standard utilities from Google to set up a WebGL context -->
-	<!-- initShaders.js	: contains helper functions to compile and link WebGL shaders to the application -->
-	<!-- MV.js			: provides matrix and vector manipulation functions APIs for WebGL -->
-	<!-- DemoJS.js		: your JS file -->
-	<!-- DemoCSS.css	: your CSS file -->
-	<script type="text/javascript" src="../Common/webgl-utils.js"></script>
-	<script type="text/javascript" src="../Common/initShaders.js"></script>
-	<script type="text/javascript" src="../Common/MV.js"></script> 
-	<script type="text/javascript" src="Robot.js"></script>
-	<script type="text/javascript" src="../Common/Geometry.js"></script>
-	<link rel="stylesheet" type="text/css" href="Robot.css">
 
-	<!-- Define the vertex shader -->
-	<script id="vertex-shader" type="x-shader/x-vertex">
-		// Declare the global variable(s) for draw calls
-		uniform mat4 projectionMatrix;
-		uniform mat4 modelViewMatrix;
-		
-		// Declare the input variable(s) to receive per-vertex data from the application
-		attribute vec4 vPosition;
-		attribute vec4 vColor;
-		
-		// Declare the varying variable(s) to pass data to the fragment shader
-		varying vec4 fColor;
+  <!-- Link CSS, JS, and WebGL -->
+  <!-- webgl-utils.js : standard utilities from Google to set up a WebGL context -->
+  <!-- initShaders.js : contains helper functions to compile and link WebGL shaders to the application -->
+  <!-- MV.js      : provides matrix and vector manipulation functions APIs for WebGL -->
+  <!-- DemoJS.js    : your JS file -->
+  <!-- DemoCSS.css  : your CSS file -->
+  <script type="text/javascript" src="../Common/webgl-utils.js"></script>
+  <script type="text/javascript" src="../Common/initShaders.js"></script>
+  <script type="text/javascript" src="../Common/MV.js"></script>
+  <script type="text/javascript" src="Robot.js"></script>
+  <script type="text/javascript" src="../Common/Geometry.js"></script>
+  <link rel="stylesheet" type="text/css" href="Robot.css">
 
-		void main()
-		{
-			gl_Position = projectionMatrix * modelViewMatrix * vPosition;
-			fColor = vColor;
-		}
-	</script>
 
-	<!-- Define the fragment shader -->
-	<script id="fragment-shader" type="x-shader/x-fragment">
-		precision mediump float;
-		varying vec4 fColor;
-		uniform bool isBall;         // The switch
-		uniform vec4 collisionColor; // The color from JS
+  <!-- Define the vertex shader -->
+  <script id="vertex-shader" type="x-shader/x-vertex">
+    // Declare the global variable(s) for draw calls
+    uniform mat4 projectionMatrix;
+    uniform mat4 modelViewMatrix;
+   
+    // Declare the input variable(s) to receive per-vertex data from the application
+    attribute vec4 vPosition;
+    attribute vec4 vColor;
+   
+    // Declare the varying variable(s) to pass data to the fragment shader
+    varying vec4 fColor;
 
-		void main() {
-				if (isBall) {
-						// If we are drawing the ball, use the collision color
-						gl_FragColor = collisionColor;
-				} else {
-						// If we are drawing the robot, use the original buffer colors
-						gl_FragColor = fColor;
-				}
-		}
-	</script>
+
+    void main()
+    {
+      gl_Position = projectionMatrix * modelViewMatrix * vPosition;
+      fColor = vColor;
+    }
+  </script>
+
+
+  <!-- Define the fragment shader -->
+  <script id="fragment-shader" type="x-shader/x-fragment">
+    precision mediump float;
+    varying vec4 fColor;
+    uniform bool isBall;         // The switch
+    uniform vec4 collisionColor; // The color from JS
+
+
+    void main() {
+        if (isBall) {
+            // If we are drawing the ball, use the collision color
+            gl_FragColor = collisionColor;
+        } else {
+            // If we are drawing the robot, use the original buffer colors
+            gl_FragColor = fColor;
+        }
+    }
+  </script>
 </head>
 
+
 <body>
-	<div class="main-container">
-		<!-- Canvas for the graphic rendering -->
-		<div class="canvas">
-			<div>
-				<text>Win Streak:</text>
-				<p id="win-count">0</p>
-				<p id="game-status-text">Lets start the game</p>
-				<text>Personal Record</text>
-				<p id="game-personal-best-text">0</p>
-			</div>
-			<div>
-				
-			</div>
-			<canvas id="gl-canvas" width="1280" height="720">
-				Error: your browser doesn't support the HTML5 canvas element
-			</canvas>
-		</div>
+  <div class="main-container">
+    <!-- Canvas for the graphic rendering -->
+    <div class="canvas-container">
+      <div class="score-panel">
+        <div class="stat-box">
+          <div class="stat-label">Win Streak</div>
+          <div class="stat-value" id="win-count">0</div>
+        </div>
+        <div class="stat-box highlight">
+          <div class="stat-label">Best Record</div>
+          <div class="stat-value" id="game-personal-best-text">0</div>
+        </div>
+        <div class="game-status" id="game-status-text">Let us start the game 🤞</div>
+      </div>
+     
+      <div class="canvas">
+        <canvas id="gl-canvas" width="1280" height="720">
+          Error: your browser doesn't support the HTML5 canvas element
+        </canvas>
+      </div>
+    </div>
 
-		<!-- Panel for parameter customization -->
-		<div class="panel vertical-align">		
-			<!-- Slider for base angle -->
-			<div class="param-panel horizontal-align">
-				<div class="slider">
-					Base Angle
-					<br>0<input class="slide" id="base-slider" type="range" min="0" max="180" value="0">180
-				</div>
-				<div class="textbox">
-					<p id="base-text">0</p>
-				</div>
+
+    <!-- Panel for parameter customization -->
+    <div class="panel vertical-align">
+      <div class="panel-title">CONTROLS</div>
+     
+      <!-- Slider for base angle -->
+      <div class="param-panel horizontal-align control-group">
+        <div class="slider">
+          <div class="control-label">
+            <span class="label-text">Base Angle</span>
+            <span class="textbox">
+              <p id="base-text">0</p>
+            </span>
+          </div>
+          <div class="slider-container">
+            <span class="slider-min">0</span>
+            <input class="slide" id="base-slider" type="range" min="0" max="180" value="0">
+            <span class="slider-max">180</span>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Slider for x translation for the robot -->
+      <div class="param-panel horizontal-align control-group">
+        <div class="slider">
+          <div class="control-label">
+            <span class="label-text">Robot X</span>
+            <span class="textbox">
+              <p id="robot-x-text">0</p>
+            </span>
+          </div>
+          <div class="slider-container">
+            <span class="slider-min">-10</span>
+            <input class="slide" id="robot-x" type="range" min="-10" max="10" value="0" step="0.1">
+            <span class="slider-max">10</span>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Slider for upper arm angle -->
+      <div class="param-panel horizontal-align control-group">
+        <div class="slider">
+          <div class="control-label">
+            <span class="label-text">Upper Arm Angle</span>
+            <span class="textbox">
+              <p id="uarm-text">0</p>
+            </span>
+          </div>
+          <div class="slider-container">
+            <span class="slider-min">-90</span>
+            <input class="slide" id="uarm-slider" type="range" min="-90" max="90" value="0">
+            <span class="slider-max">90</span>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Slider for lower arm angle -->
+      <div class="param-panel horizontal-align control-group">
+        <div class="slider">
+          <div class="control-label">
+            <span class="label-text">Lower Arm Angle</span>
+            <span class="textbox">
+              <p id="larm-text">0</p>
+            </span>
+          </div>
+          <div class="slider-container">
+            <span class="slider-min">-90</span>
+            <input class="slide" id="larm-slider" type="range" min="-90" max="90" value="0">
+            <span class="slider-max">90</span>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="param-panel horizontal-align control-group">
+        <div class="slider">
+          <div class="control-label">
+            <span class="label-text">Inner Grip</span>
+            <span class="textbox">
+              <p id="innerGrip-text">30</p>
+            </span>
+          </div>
+          <div class="slider-container">
+            <span class="slider-min">20</span>
+            <input class="slide" id="innerGrip-slider" type="range" min="20" max="90" value="30">
+            <span class="slider-max">90</span>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="param-panel horizontal-align control-group">
+        <div class="slider">
+          <div class="control-label">
+            <span class="label-text">Outer Grip</span>
+            <span class="textbox">
+              <p id="outerGrip-text">-38</p>
+            </span>
+          </div>
+          <div class="slider-container">
+            <span class="slider-min">-90</span>
+            <input class="slide" id="outerGrip-slider" type="range" min="-90" max="0" value="-38">
+            <span class="slider-max">0</span>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="param-panel horizontal-align control-group">
+        <div class="slider">
+          <div class="control-label">
+            <span class="label-text">Gripper Wrist</span>
+            <span class="textbox">
+              <p id="wrist-z-text">0</p>
+            </span>
+          </div>
+          <div class="slider-container">
+            <span class="slider-min">-180</span>
+            <input class="slide" id="wrist-z-slider" type="range" min="-180" max="180" value="0">
+            <span class="slider-max">180</span>
+          </div>
+        </div>
+      </div>
+
+			<div class="button-group"> 
+				<button id="grab-button"><span>Grab Ball</span></button>
+				<button id="restart-button"><span>Restart</span></button>
+				<button id="demo-button"><span>Gameplay demonstration</span></button>
 			</div>
 
-			<!-- Slider for x translation for the robot -->
-			<div class="param-panel horizontal-align">
-				<div class="slider">
-					Robot X
-					<br>0<input class="slide" id="robot-x" type="range" min="-10" max="10" value="0" step="0.1">180
-				</div>
-				<div class="textbox">
-					<p id="robot-x-text">0</p>
-				</div>
-			</div>
-
-			<!-- Slider for upper arm angle -->
-			<div class="param-panel horizontal-align">
-				<div class="slider">
-					Upper Arm Angle
-					<br>-90<input class="slide" id="uarm-slider" type="range" min="-90" max="90" value="43">90
-				</div>
-				<div class="textbox">
-					<p id="uarm-text">0</p>
-				</div>
-			</div>
-
-					<!-- Slider for lower arm angle -->
-			<div class="param-panel horizontal-align">
-				<div class="slider">
-					Lower Arm Angle
-					<br>-90<input class="slide" id="larm-slider" type="range" min="-90" max="90" value="0">90
-				</div>
-				<div class="textbox">
-					<p id="larm-text">0</p>
-				</div>
-			</div>
-
-			<div class="param-panel horizontal-align">
-				<div class="slider">
-					Inner Grip
-					<br>0<input class="slide" id="innerGrip-slider" type="range" min="0" max="90" value="0">90
-				</div>
-				<div class="textbox">
-					<p id="innerGrip-text">0</p>
-				</div>
-			</div>
-
-			<div class="param-panel horizontal-align">
-				<div class="slider">
-					Outer Grip
-					<br>30<input class="slide" id="outerGrip-slider" type="range" min="30" max="90" value="30">90
-				</div>
-				<div class="textbox">
-					<p id="outerGrip-text">0</p>
-				</div>
-			</div>
-
-			<div class="param-panel horizontal-align">
-				<div class="slider">
-					Gripper Wrist
-					<br>-180<input class="slide" id="wrist-z-slider" type="range" min="-180" max="180" value="0">180
-				</div>
-				<div class="textbox">
-					<p id="wrist-z-text">0</p>
-				</div>
-			</div>
-
-			<button id="grab-button">Grab</button>
-			<button id="restart-button">Restart</button>
-			<button id="demo-button">Gameplay demostration</button>
-
-			<!-- Until here -->
-		</div>
-	</div>
+      <!-- Until here -->
+    </div>
+  </div>
 </body>
 
+
 </html>
+
