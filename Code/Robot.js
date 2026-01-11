@@ -23,7 +23,7 @@ var scaleBaseBody, scaleUpperArm, scaleLowerArm;
 var instanceMatrixBase, instanceMatrixUArm, instanceMatrixLArm;
 var baseBodySlider, upperArmSlider, lowerArmSlider;
 var baseBodyText, upperArmText, lowerArmText;
-var theta = [0, 0, 0, 0, 0, 0, 0, 0],
+var theta = [0, 0, 0, 30, -38, -30, 38, 0],
   points = [],
   colors = [];
 
@@ -60,6 +60,7 @@ var innerUpperSlider,
   outerGripText;
 
 var zoomObject = 1.0;
+var autoResetTimer = null;
 
 var viewRotationX = 0;
 var viewRotationY = 0;
@@ -256,8 +257,8 @@ function getUIElement() {
   };
 
   outerGripSlider.oninput = function (event) {
-    theta[OUTER_UPPER_GRIPPER] = -event.target.value;
-    theta[OUTER_BOTTOM_GRIPPER] = event.target.value;
+    theta[OUTER_UPPER_GRIPPER] = event.target.value;
+    theta[OUTER_BOTTOM_GRIPPER] = -event.target.value;
     outerGripText.innerText = theta[OUTER_UPPER_GRIPPER];
     draw();
   };
@@ -327,6 +328,12 @@ function getUIElement() {
 
   var restartBtn = document.getElementById("restart-button");
   restartBtn.onclick = function () {
+    // Clear any pending auto-reset timer
+    if (autoResetTimer) {
+      clearTimeout(autoResetTimer);
+      autoResetTimer = null;
+    }
+    
     isDemoRunning = false;
     userRestart = true;
     restartGame();
@@ -392,7 +399,7 @@ function letGoGrip() {
   // FIXED: Extract world position by removing view rotation influence
   // When ball is held, ballModelViewMatrix = wristMatrix * translate(0, CLAW_CENTER*0.5, 0)
   // wristMatrix already includes viewRotationX and viewRotationY at the beginning
-  
+ 
   // Method 1: Rebuild the position without view rotations
   let worldMatrix = mat4();
   worldMatrix = mult(worldMatrix, translate(robotPosX, -5.0, 0.0));
@@ -405,22 +412,22 @@ function letGoGrip() {
   worldMatrix = mult(worldMatrix, rotateY(theta[WRIST_Z]));
   worldMatrix = mult(worldMatrix, translate(0.0, WRIST_SPHERE_RADIUS, 0.0));
   worldMatrix = mult(worldMatrix, translate(0.0, CLAW_CENTER * 0.5, 0.0));
-  
+ 
   // Extract true world position
   ballCurrentPos = vec3(
     worldMatrix[0][3],
     worldMatrix[1][3],
     worldMatrix[2][3]
   );
-  
+ 
   BallPosX = ballCurrentPos[0];
   BallPosY = ballCurrentPos[1];
   BallPosZ = ballCurrentPos[2];
-  
+ 
   grabButton.innerText = "Grab Ball";
 
   GripControl(innerGripSlider, outerGripSlider);
-  
+ 
   console.log("Ball released at world position:", BallPosX, BallPosY, BallPosZ);
 }
 
@@ -847,7 +854,7 @@ function OuterBottomGrip() {
 }
 
 function GripControl(innerGripper, outerGripper) {
-  if (isBallHeld) {
+  if (isBallHeld || isDemoRunning) {
     innerGripper.disabled = true;
     outerGripper.disabled = true;
   } else {
@@ -866,7 +873,8 @@ function disableAllButton() {
   var wrist = document.getElementById("wrist-z-slider");
   var grabBut = document.getElementById("grab-button");
   var demoBut = document.getElementById("demo-button");
-  
+ 
+
 
   baseSlider.disabled = true;
   robotX.disabled = true;
@@ -881,6 +889,11 @@ function disableAllButton() {
 }
 
 function enableAllButton() {
+  // do not enable buttons if demo is currently running
+  if (isDemoRunning) {
+    return;
+  }
+
   var baseSlider = document.getElementById("base-slider");
   var robotX = document.getElementById("robot-x");
   var uArm = document.getElementById("uarm-slider");
@@ -1236,40 +1249,71 @@ function checkGripCenterCollision() {
 }
 
 function scoreCount() {
+  // Skip scoring during demo
+  if (isDemoRunning) {
+    autoResetTimer = setTimeout(() => {
+      restartGame();
+    }, 5000);
+    return;
+  }
+
   if (gameStatus) {
     gameScore++;
-
     if (gameScore >= personalRecord) personalRecord = gameScore;
     console.log("Game score:", gameScore);
     console.log("personalRecord:", personalRecord);
 
     setTimeout(restartGame, 5000);
   } else {
-    personalRecord = gameScore;
     gameScore = 0;
-    // restartGame();
     setTimeout(restartGame, 5000);
   }
 
-  var winCount = document.getElementById("win-count");
-  winCount.innerHTML = gameScore;
 
-  var gameStatusText = document.getElementById("game-status-text");
-
-  if (gameScore > personalRecord)
-    gameStatusShowText = "Well done! You are at your best form today!";
-  else
-    gameStatusShowText = "Fighting! Keep trying to break your personal record!";
-  gameStatusText.innerHTML = gameStatusShowText;
-
-  var personalBestText = document.getElementById("game-personal-best-text");
-  personalBestText.innerHTML = personalRecord;
+  updateScoreDisplay();
 }
 
+
+// function to update the score display
+function updateScoreDisplay() {
+  var winCount = document.getElementById("win-count");
+  var personalBestText = document.getElementById("game-personal-best-text");
+  var gameStatusText = document.getElementById("game-status-text");
+
+
+  if (isDemoRunning) {
+    // Demo mode display
+    winCount.innerHTML = "-";
+    personalBestText.innerHTML = "-";
+    gameStatusText.innerHTML = "Demonstration: How To Play ❓";
+  } else {
+    // Normal game display
+    winCount.innerHTML = gameScore;
+    personalBestText.innerHTML = personalRecord;
+
+    if (gameScore === 0){
+      gameStatusShowText = "Let us start the game 🤞";
+    }
+    else if (gameScore >= personalRecord){
+      gameStatusShowText = "Well done! You are at your best form today! 🥳😎";
+    }
+    else{
+      gameStatusShowText = "Fighting! Keep trying to break your personal record! 🔥🔥" ;
+    }
+   
+    gameStatusText.innerHTML = gameStatusShowText;
+  }
+}
+
+
 function restartGame() {
+  // If demo was running, end it now
+  if (isDemoRunning) {
+    isDemoRunning = false;
+  }
   // 1. Reset Robot Angles (theta) and animation state
   // Use defaults that match the HTML slider initial values so the UI and model align
-  theta = [0, 0, 0, 0, 0, 0, 0, 0];
+  theta = [0, 0, 0, 30, -38, -30, 38, 0];
 
   animationPhase = ST_IDLE;
   isAnimationRunning = false;
@@ -1294,6 +1338,7 @@ function restartGame() {
 
   // 6. Reset UI elements and controls
   updateUI();
+  updateScoreDisplay(); // Update score display
   GripControl(innerGripSlider, outerGripSlider);
 
   // 7. Re-render the scene
@@ -1304,13 +1349,13 @@ function userRestartGame() {
   gameStatus = false;
   gameScore = 0;
   userRestart = false;
-  personalRecord = 0;
-  gameStatusShowText = "Lets start the game";
+  gameStatusShowText = "Let us start the game 🤞";
+
 
   // Reset viewing angle to original position
   viewRotationX = 0;
   viewRotationY = 0;
-  
+ 
   // Reset zoom to original
   zoomObject = 1.0;
 
@@ -1342,7 +1387,7 @@ function updateUI() {
   }
   if (outerGripSlider) {
     // The code stores one side as negative; present a positive slider value for user clarity
-    outerGripSlider.value = Math.abs(theta[OUTER_UPPER_GRIPPER]);
+    outerGripSlider.value = theta[OUTER_UPPER_GRIPPER];
     if (outerGripText) outerGripText.innerText = theta[OUTER_UPPER_GRIPPER];
   }
 
@@ -1366,17 +1411,11 @@ function updateUI() {
   var grabBtn = document.getElementById("grab-button");
   if (grabBtn) grabBtn.innerText = "Grab Ball";
 
-  // Score and status displays
-  var winCount = document.getElementById("win-count");
-  if (winCount) winCount.innerHTML = gameScore;
 
-  var gameStatusText = document.getElementById("game-status-text");
-  if (gameStatusText)
-    gameStatusText.innerHTML = gameStatus ? "Win" : "Let us start the game";
-
-  var personalBestText = document.getElementById("game-personal-best-text");
-  if (personalBestText) personalBestText.innerHTML = personalRecord || 0;
+  // Update score display
+  updateScoreDisplay();
 }
+
 
 // function demo() {
 //   robotPosX = -4;
@@ -1437,10 +1476,16 @@ const demoTargets = {
 
 // Start demo function
 function startDemo() {
-  isDemoRunning = true;
-  demoAnimationPhase = DEMO_ST_MOVE_ROBOT;
-  disableAllButton(); // Disable controls immediately when demo starts
-  requestAnimationFrame(demo);
+  if (confirm("🎬 Start Gameplay Demonstration?\n\nAll the current progress will lost‼️")) {
+    restartGame(); //reset all the interface to the original state so that the demnstration video can run properly
+    isDemoRunning = true;
+    demoAnimationPhase = DEMO_ST_MOVE_ROBOT;
+    disableAllButton();
+    updateScoreDisplay(); // Update display to show demo mode
+    requestAnimationFrame(demo);
+  } else{
+    enableAllButton();
+  }
 }
 
 // Main demo animation function with switch case
@@ -1638,7 +1683,7 @@ function demo() {
 
       // 4. End Demo but keep draw() running for the fall
       demoAnimationPhase = DEMO_ST_IDLE;
-      isDemoRunning = false;
+
 
       // 5. Ensure the falling animation keeps looping
       // Since demo stopped, we need to make sure the global loop is aware
@@ -1655,8 +1700,9 @@ function demo() {
   // Update the display
   draw();
 
-  // Continue animation loop
-  if (isDemoRunning) {
+
+  // Continue animation loop ONLY if still actively animating
+  if (isDemoRunning && demoAnimationPhase !== DEMO_ST_IDLE) {
     requestAnimationFrame(demo);
   }
 }
