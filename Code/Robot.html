@@ -66,6 +66,84 @@
 
 <body>
   <div class="main-container">
+    <!-- Keyboard Controls Legend -->
+    <div class="keyboard-legend">
+      <div class="legend-title">KEYBOARD CONTROLS</div>
+      
+      <div class="legend-section">
+        <div class="legend-section-title">Movement</div>
+        <div class="legend-item">
+          <div class="key-group">
+            <kbd class="key">A</kbd>
+            <kbd class="key">D</kbd>
+          </div>
+          <span class="legend-desc">Robot X Position</span>
+        </div>
+      </div>
+
+      <div class="legend-section">
+        <div class="legend-section-title">Rotation</div>
+        <div class="legend-item">
+          <div class="key-group">
+            <kbd class="key">Q</kbd>
+            <kbd class="key">E</kbd>
+          </div>
+          <span class="legend-desc">Base Angle</span>
+        </div>
+        <div class="legend-item">
+          <div class="key-group">
+            <kbd class="key">Z</kbd>
+            <kbd class="key">X</kbd>
+          </div>
+          <span class="legend-desc">Wrist Rotation</span>
+        </div>
+      </div>
+
+      <div class="legend-section">
+        <div class="legend-section-title">Arms</div>
+        <div class="legend-item">
+          <div class="key-group">
+            <kbd class="key">W</kbd>
+            <kbd class="key">S</kbd>
+          </div>
+          <span class="legend-desc">Upper Arm</span>
+        </div>
+        <div class="legend-item">
+          <div class="key-group">
+            <kbd class="key">R</kbd>
+            <kbd class="key">F</kbd>
+          </div>
+          <span class="legend-desc">Lower Arm</span>
+        </div>
+      </div>
+
+      <div class="legend-section">
+        <div class="legend-section-title">Grippers</div>
+        <div class="legend-item">
+          <div class="key-group">
+            <kbd class="key">C</kbd>
+            <kbd class="key">V</kbd>
+          </div>
+          <span class="legend-desc">Inner Grip</span>
+        </div>
+        <div class="legend-item">
+          <div class="key-group">
+            <kbd class="key">G</kbd>
+            <kbd class="key">H</kbd>
+          </div>
+          <span class="legend-desc">Outer Grip</span>
+        </div>
+      </div>
+
+      <div class="legend-section">
+        <div class="legend-section-title">Action</div>
+        <div class="legend-item">
+          <kbd class="key key-wide">SPACE</kbd>
+          <span class="legend-desc">Grab/Release Ball</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Canvas for the graphic rendering -->
     <div class="canvas-container">
       <div class="score-panel">
@@ -103,8 +181,8 @@
           </div>
           <div class="slider-container">
             <span class="slider-min">0</span>
-            <input class="slide" id="base-slider" type="range" min="0" max="180" value="0">
-            <span class="slider-max">180</span>
+            <input class="slide" id="base-slider" type="range" min="0" max="360" value="0">
+            <span class="slider-max">360</span>
           </div>
         </div>
       </div>
@@ -215,14 +293,52 @@
       </div>
 
 			<div class="button-group"> 
-				<button id="grab-button"><span>Grab Ball</span></button>
-				<button id="restart-button"><span>Restart</span></button>
-				<button id="demo-button"><span>Gameplay demonstration</span></button>
-			</div>
+        <div id="game-controls">
+          <button id="grab-button"><span>Grab Ball</span></button>
+          <button id="restart-button"><span>Restart</span></button>
+          <button id="demo-button"><span>Gameplay demonstration</span></button>
+        </div>
+
+        <div id="demo-controls" style="display: none;">
+          <button id="restart-demo-btn"><span>Restart Demo</span></button>
+          <button id="quit-demo-btn"><span>Quit Demo</span></button>
+        </div>
+      </div>
 
       <!-- Until here -->
     </div>
   </div>
+
+  <div id="custom-modal-overlay" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title" class="modal-title">CONFIRM ACTION</h3>
+    </div>
+    <div class="modal-body">
+      <p id="modal-message">Are you sure?</p>
+    </div>
+    <div class="modal-actions">
+      <button id="modal-cancel-btn" class="modal-btn cancel">CANCEL</button>
+      <button id="modal-confirm-btn" class="modal-btn confirm">CONFIRM</button>
+    </div>
+  </div>
+</div>
+
+<div id="game-over-modal" class="modal-overlay hidden">
+  <div class="modal-box game-over">
+    <div class="modal-header">
+      <h3 class="modal-title error">MISSION FAILED</h3>
+    </div>
+    <div class="modal-body">
+      <p id="game-over-message">System Failure.</p>
+    </div>
+    <div class="modal-actions center">
+      <button id="game-over-btn" class="modal-btn danger">RESTART SYSTEM</button>
+    </div>
+  </div>
+</div>
+
+
 </body>
 
 
