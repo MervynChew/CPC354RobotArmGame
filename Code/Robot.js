@@ -5,7 +5,8 @@
 // Common variables
 var canvas, gl, program;
 var pBuffer, nBuffer, vPosition, vColor;
-var modelViewMatrixLoc, projectionMatrixLoc;
+var modelViewMatrixLoc, projectionMatrixLoc, normalMatrixLoc;
+var lightPositionLoc, lightColorLoc, materialShininessLoc;
 var modelViewMatrix, projectionMatrix;
 
 // Variables referencing HTML elements
@@ -26,6 +27,7 @@ var baseBodyText, upperArmText, lowerArmText;
 var theta = [0, 0, 0, 30, -38, -30, 38, 0],
   points = [],
   colors = [];
+  normals = [];
 
 // Here is add de
 const INNER_UPPER_GRIPPER = 3;
@@ -41,6 +43,27 @@ const INNERBOTTOM_GRIP_HEIGHT = 1.0;
 const INNERBOTTOM_GRIP_WIDTH = 0.3;
 const OUTERBOTTOM_GRIP_HEIGHT = 1.0;
 const OUTERBOTTOM_GRIP_WIDTH = 0.3;
+
+const PRIMARY_PALETTE = [
+    vec4(0.25, 0.25, 0.28, 1.0), // Front 
+    vec4(0.75, 0.75, 0.88, 1.0), // Back
+    vec4(0.45, 0.45, 0.50, 1.0), // Top 
+    vec4(0.10, 0.10, 0.12, 1.0), // Bottom
+    vec4(0.08, 0.08, 0.10, 1.0), // Right 
+    vec4(0.75, 0.75, 0.88, 1.0)  // Left 
+];
+
+
+
+const SECONDARY_PALETTE = [
+    vec4(0.40, 0.00, 1.00, 1.0), // Front
+    vec4(0.20, 0.00, 0.80, 1.0), // Back
+    vec4(0.45, 0.50, 1.00, 1.0), // Top (Bright Glow)
+    vec4(0.10, 0.00, 0.60, 1.0), // Bottom
+    vec4(0.30, 0.00, 0.90, 1.0), // Right
+    vec4(0.20, 0.00, 0.90, 1.0)  // Left
+];
+
 var scaleInnerUpperGrip,
   scaleOuterUpperGrip,
   scaleInnerBottomGrip,
@@ -62,7 +85,7 @@ var innerUpperSlider,
 var zoomObject = 1.0;
 var autoResetTimer = null;
 
-var viewRotationX = 0;
+var viewRotationX = -1;
 var viewRotationY = 0;
 var dragging = false;
 var lastMouseX = 0;
@@ -70,6 +93,9 @@ var lastMouseY = 0;
 
 var cubeLength = 0;
 const WRIST_SPHERE_RADIUS = 0.4; // Slightly wider than the arm (0.5)
+
+var floorStart = 0;
+var floorCount = 0;
 
 var isBallLoc, colColorLoc;
 
@@ -98,7 +124,7 @@ const CLAW_CENTER = INNERUPPER_GRIP_HEIGHT + OUTERUPPER_GRIP_HEIGHT * 0.5;
 
 var isFalling = false;
 
-const FLOOR_Y = -5.0; // The level of your "ground"
+const FLOOR_Y = -5.4; // The level of your "ground"
 const GRIPDROPROTATIONSPEED = 0.75;
 
 // Collision detection
@@ -106,7 +132,10 @@ var isGameActive = true;
 var ballStageX = -12.0;  // Fixed X position of stage
 var ballStageY = -5.0;   // Height of the stage platform (at ground level)
 var ballStageZ = 0.0;    // Fixed Z position of stage
-var ballStageRadius = 4.0;  // Radius of the circular stage
+var ballStageVisualRadius = 4.0;  // Radius of the circular stage
+
+// Collision detection
+var ballStageRadius = 2.4;  // For physics (matches what player sees)
 
 // Ball physics for rolling
 var ballIsRolling = false;
@@ -128,7 +157,7 @@ var isAnimationRunning = false;
 const GRAVITY = 0.0015; // Acceleration due to gravity
 const BOUNCE_DAMPING = 0.6; // Energy loss on bounce (0-1)
 const RIM_BOUNCE_DAMPING = 0.4; // Energy loss when hitting rim
-const FRICTION = 0.92; // Air resistance
+const FRICTION = 0.94; // Air resistance
 
 // Ball physics state
 let ballVelocity = { x: 0, y: 0, z:0 }; // Velocity in x and y directions
@@ -141,23 +170,47 @@ var gameStatus = false;
 var personalRecord = 0;
 var gameStatusShowText;
 var userRestart = false;
+var loseGame = false;
 
 /*-----------------------------------------------------------------------------------*/
 // WebGL Utilities
 /*-----------------------------------------------------------------------------------*/
+
+function normalMatrixFromMat4(m) {
+  // Take upper-left 3x3 portion
+  return mat3(
+    m[0][0], m[1][0], m[2][0],
+    m[0][1], m[1][1], m[2][1],
+    m[0][2], m[1][2], m[2][2]
+  );
+}
+
 
 // Execute the init() function when the web page has fully loaded
 window.onload = function init() {
   // Primitive (geometric shape) initialization
   var cube = colorCube();
   points = cube.Point;
-  colors = cube.Color;
+  normals = cube.Normal || [];
 
+  colors = [];
+  const verticesPerFace = 6;
+  for (let face = 0; face < 6; face++) {
+      for (let v = 0; v < verticesPerFace; v++) {
+          colors.push(PRIMARY_PALETTE[face]);
+      }
+  }
   cubeLength = cube.Point.length;
 
-  var ball = sphere(6);
+  var ball = sphere(7);
   points = points.concat(ball.Point);
   colors = colors.concat(ball.Color);
+
+  var ballNormals = ball.Point.map(function(p) {
+    var len = Math.sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
+    return vec3(p[0]/len, p[1]/len, p[2]/len);
+  });
+  normals = normals.concat(ballNormals);
 
   sphereStart = cubeLength;
   sphereCount = ball.Point.length;
@@ -165,16 +218,26 @@ window.onload = function init() {
   // Add cylinder for stage
   var stageCylinder = cylinder(36, 1, true);  // 36 slices, 1 stack, with caps
   points = points.concat(stageCylinder.Point);
-  colors = colors.concat(stageCylinder.Point.map(() => vec4(0.5, 0.5, 0.5, 1.0)));
+  colors = colors.concat(stageCylinder.Point.map(() => vec4(0.2, 0.2, 0.22, 1.0)));
+  normals = normals.concat(stageCylinder.Point.map(() => vec3(0, 1, 0)));
 
   cylinderStart = sphereStart + sphereCount;
   cylinderCount = stageCylinder.Point.length;
+
+  var floorCube = colorCube();
+  points = points.concat(floorCube.Point);
+  colors = colors.concat(floorCube.Point.map(() => vec4(0.35, 0.37, 0.40, 1.0))); // Dark gray floor
+  normals = normals.concat(floorCube.Normal || []);
+
+  floorStart = cylinderStart + cylinderCount;
+  floorCount = floorCube.Point.length;
 
   // WebGL setups
   getUIElement();
   controller();
   configWebGL();
   render();
+  draw();
 };
 
 function controller() {
@@ -747,6 +810,24 @@ function checkProposedMove(newTheta, newRobotX) {
   return false; 
 }
 
+function setComponentColor(palette) {
+    const colorArray = [];
+    for (let face = 0; face < 6; face++) {
+        for (let v = 0; v < 6; v++) {
+            colorArray.push(palette[face]);
+        }
+    }
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, colBuffer);
+
+    // 👇 ONLY overwrite cube colors
+    gl.bufferSubData(
+        gl.ARRAY_BUFFER,
+        0, // offset (cube starts at 0)
+        flatten(colorArray)
+    );
+}
+
 // Retrieve all elements from HTML and store in the corresponding variables
 function getUIElement() {
   canvas = document.getElementById("gl-canvas");
@@ -1133,18 +1214,28 @@ function showGameOver(message) {
   msgEl.innerText = message;
 
   // Show modal
-  overlay.classList.remove("hidden");
-  overlay.classList.add("active");
-
+  //if (loseGame) {
+    overlay.classList.remove("hidden");
+    overlay.classList.add("active");
+  //} 
+  
   // Handle Restart Click
   restartBtn.onclick = function() {
     overlay.classList.remove("active");
-    setTimeout(() => overlay.classList.add("hidden"), 300);
+    overlay.classList.add("hidden");
     
     // Reset the game
     gameScore = 0; // Reset score on failure
+    isGameActive = false; // CRITICAL: Re-enable game state
+    ballWasReleased = false; // Reset release flag
+
+    
+    
     restartGame();
+    console.log("helo");
     enableAllButton();
+
+    draw();
   };
 }
 
@@ -1216,24 +1307,24 @@ function gripBall() {
 function configWebGL() {
   // Initialize the WebGL context
   gl = WebGLUtils.setupWebGL(canvas);
+  
 
   if (!gl) {
     alert("WebGL isn't available");
   }
 
-  // Set the viewport and clear the color
+  // Set the viewport and clear color (subtle blue-gray instead of white)
   gl.viewport(0, 0, canvas.width, canvas.height);
-  gl.clearColor(1.0, 1.0, 1.0, 1.0);
+  gl.clearColor(0.96, 0.96, 0.98, 1.0);  // ← CHANGED: Better background
 
   // Enable hidden-surface removal
   gl.enable(gl.DEPTH_TEST);
 
-  // Compile the vertex and fragment shaders and link to WebGL
+  // Compile shaders
   program = initShaders(gl, "vertex-shader", "fragment-shader");
   gl.useProgram(program);
 
-  // Create buffers and link them to the corresponding attribute variables in vertex and fragment shaders
-  // Buffer for positions
+  // Position Buffer
   pBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, pBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, flatten(points), gl.STATIC_DRAW);
@@ -1242,7 +1333,7 @@ function configWebGL() {
   gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(vPosition);
 
-  // Buffer for colors
+  // Color Buffer
   colBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, colBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW);
@@ -1251,13 +1342,44 @@ function configWebGL() {
   gl.vertexAttribPointer(vColor, 4, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(vColor);
 
-  // Get the location of the uniform variables within a compiled shader program
+  // Normal Buffer
+  nBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, flatten(normals), gl.STATIC_DRAW);
+  
+  var vNormal = gl.getAttribLocation(program, "vNormal");
+  gl.vertexAttribPointer(vNormal, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(vNormal);
+
+  // Uniform Locations
   modelViewMatrixLoc = gl.getUniformLocation(program, "modelViewMatrix");
   projectionMatrixLoc = gl.getUniformLocation(program, "projectionMatrix");
-
-  // ADD THESE TWO:
+  
+  // Lighting uniforms
+  normalMatrixLoc = gl.getUniformLocation(program, "normalMatrix");
+  lightPositionLoc = gl.getUniformLocation(program, "lightPosition");
+  lightColorLoc = gl.getUniformLocation(program, "lightColor");
+  materialShininessLoc = gl.getUniformLocation(program, "materialShininess");
+  
   isBallLoc = gl.getUniformLocation(program, "isBall");
   colColorLoc = gl.getUniformLocation(program, "collisionColor");
+  
+  // Set Light Properties IMMEDIATELY
+  // Position light above and to the side for good shadows
+  gl.uniform3fv(lightPositionLoc, flatten(vec3(8.0, 12.0, 8.0)));
+  gl.uniform3fv(lightColorLoc, flatten(vec3(1.0, 0.98, 0.95)));
+  
+  // Set default material shininess
+  gl.uniform1f(materialShininessLoc, 32.0);
+}
+
+function normalMatrixFromMat4(m) {
+  // Extract 3x3 normal matrix from 4x4 model-view matrix
+  return mat3(
+    m[0][0], m[1][0], m[2][0],
+    m[0][1], m[1][1], m[2][1],
+    m[0][2], m[1][2], m[2][2]
+  );
 }
 
 // Render the graphics for viewing
@@ -1363,9 +1485,24 @@ function draw() {
   modelViewMatrix = mult(modelViewMatrix, rotateY(viewRotationY));
 
   // Move to Base and draw
-  modelViewMatrix = mult(modelViewMatrix, translate(robotPosX, -5.0, 0.0));
+  modelViewMatrix = mult(modelViewMatrix, translate(robotPosX, -5.3, 0.0));
   modelViewMatrix = mult(modelViewMatrix, rotateY(theta[BASE_BODY]));
   baseBody();
+
+  gl.uniform1i(isBallLoc, true);
+  gl.uniform4fv(colColorLoc, flatten(vec4(0.7, 0.7, 0.7, 1.0))); // Gray sphere
+
+  // Move to top of base
+  var shoulderMatrix = mult(modelViewMatrix, translate(0.0, BASE_HEIGHT, 0.0));
+  // Scale it to match or be slightly bigger than wrist sphere
+  var shoulderConnectorMatrix = mult(shoulderMatrix, scale(WRIST_SPHERE_RADIUS * 1.2, WRIST_SPHERE_RADIUS * 1.2, WRIST_SPHERE_RADIUS * 1.2));
+
+  gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(shoulderConnectorMatrix));
+  var normalMatrix = normalMatrixFromMat4(shoulderConnectorMatrix);
+  gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+  gl.uniform1f(materialShininessLoc, 45.0);
+  gl.drawArrays(gl.TRIANGLES, sphereStart, sphereCount);
+  gl.uniform1i(isBallLoc, false);
 
   // Move to Upper Arm and draw
   modelViewMatrix = mult(modelViewMatrix, translate(0.0, BASE_HEIGHT, 0.0));
@@ -1374,6 +1511,17 @@ function draw() {
 
   // Move to Lower Arm and draw
   modelViewMatrix = mult(modelViewMatrix, translate(0.0, UARM_HEIGHT, 0.0));
+
+  gl.uniform1i(isBallLoc, true);
+  gl.uniform4fv(colColorLoc, flatten(vec4(0.7, 0.7, 0.7, 1.0))); // Gray sphere
+  var elbowConnectorMatrix = mult(modelViewMatrix, scaleWristConn);
+  gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(elbowConnectorMatrix));
+  var normalMatrix = normalMatrixFromMat4(elbowConnectorMatrix);
+  gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+  gl.uniform1f(materialShininessLoc, 45.0);
+  gl.drawArrays(gl.TRIANGLES, sphereStart, sphereCount);
+  gl.uniform1i(isBallLoc, false);
+
   modelViewMatrix = mult(modelViewMatrix, rotateZ(theta[LOWER_ARM]));
   lowerArm();
 
@@ -1490,18 +1638,41 @@ function draw() {
 
   // Draw stage platform (circular cylinder)
   gl.uniform1i(isBallLoc, true);
-  gl.uniform4fv(colColorLoc, flatten(vec4(0.5, 0.5, 0.5, 1.0)));
+  gl.uniform4fv(colColorLoc, flatten(vec4(0.15, 0.15, 0.17, 1.0)));
 
   var stageMatrix = mat4();
   stageMatrix = mult(stageMatrix, rotateX(viewRotationX));
   stageMatrix = mult(stageMatrix, rotateY(viewRotationY));
-  stageMatrix = mult(stageMatrix, translate(ballStageX, ballStageY + 0.15, ballStageZ));
+  stageMatrix = mult(stageMatrix, translate(ballStageX, ballStageY - 0.15, ballStageZ));
   // Scale: X and Z control radius, Y controls height
-  stageMatrix = mult(stageMatrix, scale(ballStageRadius, 0.3, ballStageRadius));
+  stageMatrix = mult(stageMatrix, scale(ballStageVisualRadius, 0.3, ballStageVisualRadius));
 
   modelViewMatrix = stageMatrix;
   gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
+
+  var normalMatrix = normalMatrixFromMat4(modelViewMatrix);
+  gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+  gl.uniform1f(materialShininessLoc, 16.0);
+  
   gl.drawArrays(gl.TRIANGLES, cylinderStart, cylinderCount);
+
+  gl.uniform1i(isBallLoc, false);
+  
+  var floorMatrix = mat4();
+  floorMatrix = mult(floorMatrix, rotateX(viewRotationX));
+  floorMatrix = mult(floorMatrix, rotateY(viewRotationY));
+  floorMatrix = mult(floorMatrix, translate(0, FLOOR_Y - 0.1, 0)); // Just below floor level
+  // Scale: make it very wide (X), very thin (Y), and deep (Z)
+  floorMatrix = mult(floorMatrix, scale(40, 0.2, 40));
+
+  modelViewMatrix = floorMatrix;
+  gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
+
+  var normalMatrix = normalMatrixFromMat4(modelViewMatrix);
+  gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+  gl.uniform1f(materialShininessLoc, 16.0);
+  
+  gl.drawArrays(gl.TRIANGLES, floorStart, floorCount);
 
   if (isFalling || isAnimationRunning || ballIsRolling) {
     window.requestAnimationFrame(draw);
@@ -1519,6 +1690,10 @@ function basket(drawOutline) {
   var t = mult(modelViewMatrix, s);
   gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(t));
 
+  var normalMatrix = normalMatrixFromMat4(t);
+  gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+  gl.uniform1f(materialShininessLoc, 8.0);
+
   if (drawOutline) {
     // Draw just the wireframe edges
     gl.drawArrays(gl.LINE_LOOP, 0, cubeLength);
@@ -1535,7 +1710,13 @@ function ball() {
 
   // Pass the model view matrix from JavaScript to the GPU for use in shader
   gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(t));
-
+  
+  var normalMatrix = normalMatrixFromMat4(t);
+  gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+  
+  // Ball is very shiny
+  gl.uniform1f(materialShininessLoc, 120.0);
+  
   // Draw the primitive / geometric shape
   gl.drawArrays(gl.TRIANGLES, sphereStart, sphereCount);
 }
@@ -1545,54 +1726,81 @@ function wristConnector() {
   var t = mult(modelViewMatrix, instanceMatrixWristConn);
 
   gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(t));
-
+  
+  var normalMatrix = normalMatrixFromMat4(t);
+  gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+  gl.uniform1f(materialShininessLoc, 45.0);
+  
   // Change from cubeLength to your sphere variables
   gl.drawArrays(gl.TRIANGLES, sphereStart, sphereCount);
 }
 
 // Helper function to draw base body
 function baseBody() {
-  // Set the shape using instance matrix
+  setComponentColor(PRIMARY_PALETTE);
   var t = mult(modelViewMatrix, instanceMatrixBase);
-
-  // Pass the model view matrix from JavaScript to the GPU for use in shader
   gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(t));
-
-  // Draw the primitive / geometric shape
+  
+  // Calculate and send normal matrix
+  var normalMatrix = normalMatrixFromMat4(t);
+  gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+  
+  // Set material shininess (metallic robot parts)
+  gl.uniform1f(materialShininessLoc, 32.0);
+  
   gl.drawArrays(gl.TRIANGLES, 0, cubeLength);
 }
 
+
 // Helper function to draw upper arm
 function upperArm() {
+  setComponentColor(PRIMARY_PALETTE);
+
   // Set the shape using instance matrix
   var t = mult(modelViewMatrix, instanceMatrixUArm);
 
   // Pass the model view matrix from JavaScript to the GPU for use in shader
   gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(t));
-
+  
+  var normalMatrix = normalMatrixFromMat4(t);
+  gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+  gl.uniform1f(materialShininessLoc, 50.0);
+  
   // Draw the primitive / geometric shape
   gl.drawArrays(gl.TRIANGLES, 0, cubeLength);
 }
 
 // Helper function to draw lower arm
 function lowerArm() {
+  setComponentColor(PRIMARY_PALETTE);
+
   // Set the shape using instance matrix
   var t = mult(modelViewMatrix, instanceMatrixLArm);
 
   // Pass the model view matrix from JavaScript to the GPU for use in shader
   gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(t));
-
+  
+  var normalMatrix = normalMatrixFromMat4(t);
+  gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+  gl.uniform1f(materialShininessLoc, 50.0);
+  
   // Draw the primitive / geometric shape
   gl.drawArrays(gl.TRIANGLES, 0, cubeLength);
 }
 
 // Helper function to draw Inner Upper Grip
 function InnerUpperGrip() {
+  setComponentColor(SECONDARY_PALETTE);
+
   // Set the shape using instance matrix
   var t = mult(modelViewMatrix, instanceMatrixIUGrip);
 
   // Pass the model view matrix from JavaScript to the GPU for use in shader
   gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(t));
+
+  var normalMatrix = normalMatrixFromMat4(t);
+  gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+  gl.uniform1f(materialShininessLoc, 60.0);
 
   // Draw the primitive / geometric shape
   gl.drawArrays(gl.TRIANGLES, 0, cubeLength);
@@ -1600,11 +1808,17 @@ function InnerUpperGrip() {
 
 // Helper function to draw Inner Bottom Grip
 function InnerBottomGrip() {
+  setComponentColor(SECONDARY_PALETTE);
+
   // Set the shape using instance matrix
   var t = mult(modelViewMatrix, instanceMatrixIBGrip);
 
   // Pass the model view matrix from JavaScript to the GPU for use in shader
   gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(t));
+
+  var normalMatrix = normalMatrixFromMat4(t);
+  gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+  gl.uniform1f(materialShininessLoc, 60.0);
 
   // Draw the primitive / geometric shape
   gl.drawArrays(gl.TRIANGLES, 0, cubeLength);
@@ -1612,11 +1826,17 @@ function InnerBottomGrip() {
 
 // Helper function to draw Outer Upper Grip
 function OuterUpperGrip() {
+  setComponentColor(SECONDARY_PALETTE);
+
   // Set the shape using instance matrix
   var t = mult(modelViewMatrix, instanceMatrixOUGrip);
 
   // Pass the model view matrix from JavaScript to the GPU for use in shader
   gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(t));
+
+  var normalMatrix = normalMatrixFromMat4(t);
+  gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+  gl.uniform1f(materialShininessLoc, 60.0);
 
   // Draw the primitive / geometric shape
   gl.drawArrays(gl.TRIANGLES, 0, cubeLength);
@@ -1624,11 +1844,17 @@ function OuterUpperGrip() {
 
 // Helper function to draw Outer Bottom Grip
 function OuterBottomGrip() {
+  setComponentColor(SECONDARY_PALETTE);
+  
   // Set the shape using instance matrix
   var t = mult(modelViewMatrix, instanceMatrixOBGrip);
 
   // Pass the model view matrix from JavaScript to the GPU for use in shader
   gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(t));
+
+  var normalMatrix = normalMatrixFromMat4(t);
+  gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+  gl.uniform1f(materialShininessLoc, 45.0);
 
   // Draw the primitive / geometric shape
   gl.drawArrays(gl.TRIANGLES, 0, cubeLength);
@@ -1761,6 +1987,8 @@ function releaseBall() {
   const basketBottom = BASKET_Y - BASKET_HEIGHT / 2;
   const basketLeft = BASKET_X - BASKET_SIZE / 2;
   const basketRight = BASKET_X + BASKET_SIZE / 2;
+  const basketBack = BASKET_Z - BASKET_SIZE / 2;
+  const basketFront = BASKET_Z + BASKET_SIZE / 2;
 
   // Get ball edges
   const ballLeft = ballCurrentPos[0] - ballRadius;
@@ -1815,7 +2043,8 @@ function releaseBall() {
 
   // ===== LANDING DETECTION =====
   const isOverBasket =
-    ballCurrentPos[0] > basketLeft && ballCurrentPos[0] < basketRight;
+    ballCurrentPos[0] > basketLeft && ballCurrentPos[0] < basketRight &&
+    ballCurrentPos[2] > basketBack && ballCurrentPos[2] < basketFront;
 
   if (isOverBasket) {
     const wallLeft = basketLeft + ballRadius;
@@ -1870,11 +2099,13 @@ function releaseBall() {
       if (Math.abs(ballVelocity.y) > 0.015) {
         ballVelocity.y = -ballVelocity.y * BOUNCE_DAMPING;
         ballVelocity.x *= 0.88;
+        ballVelocity.z *= 0.88; // ← ADD: Also dampen Z velocity
       } else {
         ballVelocity.y = 0;
         ballVelocity.x *= 0.92;
+        ballVelocity.z *= 0.92; // ← ADD: Also dampen Z velocity
 
-        if (Math.abs(ballVelocity.x) < 0.008) {
+        if (Math.abs(ballVelocity.x) < 0.008 && Math.abs(ballVelocity.z) < 0.008) {
           ballVelocity.x = 0;
           ballVelocity.z = 0;
           isFalling = false;
@@ -1882,15 +2113,17 @@ function releaseBall() {
           ballIsRolling = false;
           gameStatus = false;
           
-          // GAME OVER TYPE 2: Ball missed the basket after release
-          if (!isDemoRunning && ballWasReleased) {
-            // Disable buttons
+          // ← ADD: GAME OVER TYPE 2 - Trigger modal AFTER ball has landed
+          if (!isDemoRunning && (ballWasReleased || loseGame)) {
             disableAllButton();
             
-            // TRIGGER NEW MODAL
-            showGameOver("REASON:\nThe ball is not in the basket!");
+            if (loseGame) {
+              showGameOver("REASON:\nThe ball fell off the stage!");
+              loseGame = false; // Reset flag
+            } else {
+              showGameOver("REASON:\nThe ball is not in the basket!");
+            }
             
-            // Important: Set these flags so physics stops calculating
             gameStatus = false;
             isFalling = false; 
             return; 
@@ -1906,8 +2139,9 @@ function releaseBall() {
   // Sync variables
   BallPosX = ballCurrentPos[0];
   BallPosY = ballCurrentPos[1];
+  BallPosZ = ballCurrentPos[2]; // ← Make sure Z is also synced
 
-  // Check game over
+  // Check game over (but only after ball has fully settled)
   if (!isFalling && !isBallHeld) {
     checkGameOver();
   }
@@ -1920,6 +2154,13 @@ function updateBallRolling() {
   // 1. Apply Velocity to Position (X and Z)
   ballCurrentPos[0] += ballVelocity.x;
   ballCurrentPos[2] += ballVelocity.z; 
+
+  var distFromCenter = Math.sqrt(
+    (ballCurrentPos[0] - ballStageX) ** 2 + 
+    (ballCurrentPos[2] - ballStageZ) ** 2
+  );
+  console.log("Ball distance from stage center:", distFromCenter.toFixed(2), "/ Radius:", ballStageRadius);
+  console.log("Ball Y position:", ballCurrentPos[1].toFixed(2));
   
   // 2. Apply Friction (Slow down both X and Z)
   ballVelocity.x *= FRICTION; 
@@ -1928,14 +2169,15 @@ function updateBallRolling() {
   // 3. Check if ball falls off stage
   if (!isBallOnStage()) {
     console.log("Ball fell off the stage!");
-    isFalling = true;
-    ballIsRolling = false;
-    ballVelocity.y = 0; 
-    // Note: We KEEP x/z velocity so it arcs off the stage naturally
+    isFalling = true;        // ← Start falling physics
+    ballIsRolling = false;   // ← Stop rolling
+    loseGame = true;         // ← Mark as lost
+    // DON'T call game over here - let it fall first!
   }
   
   // 4. Stop rolling if velocity is very low
   if (Math.abs(ballVelocity.x) < 0.001 && Math.abs(ballVelocity.z) < 0.001) {
+    console.log("⚪ Ball stopped rolling (friction)");
     ballIsRolling = false;
     ballVelocity.x = 0;
     ballVelocity.z = 0;
@@ -2060,71 +2302,6 @@ function checkGripCenterCollision() {
   return dist < captureRadius && theta[INNER_UPPER_GRIPPER] > 60 && theta[OUTER_UPPER_GRIPPER] > -35;
 }
 
-// Check if robot arm collides with basket
-function checkArmCollisionWithBasket() {
-  // Get basket bounds
-  var basketLeft = BASKET_X - BASKET_SIZE / 2;
-  var basketRight = BASKET_X + BASKET_SIZE / 2;
-  var basketBottom = BASKET_Y - BASKET_HEIGHT / 2;
-  var basketTop = BASKET_Y + BASKET_HEIGHT / 2;
-  var basketFront = BASKET_Z + BASKET_SIZE / 2;
-  var basketBack = BASKET_Z - BASKET_SIZE / 2;
-  
-  // Check wrist position (main collision point)
-  var wristX = wristMatrix[0][3];
-  var wristY = wristMatrix[1][3];
-  var wristZ = wristMatrix[2][3];
-  
-  // Add margin for arm thickness
-  var margin = 0.8;
-  
-  var wristCollision = wristX >= basketLeft - margin && wristX <= basketRight + margin &&
-                       wristY >= basketBottom - margin && wristY <= basketTop + margin &&
-                       wristZ >= basketBack - margin && wristZ <= basketFront + margin;
-  
-  return wristCollision;
-}
-
-// Check if robot arm hits the ground
-function checkArmGroundCollision() {
-  // Check wrist position
-  var wristY = wristMatrix[1][3];
-  
-  // Check if wrist is below or at ground level
-  if (wristY <= FLOOR_Y + 0.5) { // 0.5 is safety margin
-    return true;
-  }
-  
-  return false;
-}
-
-// Check if robot arm collides with stage
-function checkArmStageCollision() {
-  // Check wrist position
-  var wristX = wristMatrix[0][3];
-  var wristY = wristMatrix[1][3];
-  var wristZ = wristMatrix[2][3];
-  
-  // Calculate distance from wrist to stage center
-  var distFromStageCenter = Math.sqrt(
-    (wristX - ballStageX) ** 2 + 
-    (wristZ - ballStageZ) ** 2
-  );
-  
-  // Stage top surface
-  var stageTop = ballStageY + 0.3;
-  var stageBottom = ballStageY;
-  
-  // Check if wrist is within stage cylinder and below top surface
-  if (distFromStageCenter <= ballStageRadius && 
-      wristY <= stageTop + 0.5 && 
-      wristY >= stageBottom - 0.5) {
-    return true;
-  }
-  
-  return false;
-}
-
 // Check if robot arm touches ball (when not held)
 function checkArmBallCollision() {
   if (isBallHeld || isFalling || ballIsRolling) return false;
@@ -2163,7 +2340,7 @@ function triggerBallRolling() {
   if (pushMag > 0.01) {
     // REDUCED FORCE: Changed 0.15 to 0.08
     // This makes the push gentler so it doesn't fly off the stage instantly
-    var pushStrength = 0.08; 
+    var pushStrength = 0.10; 
     
     ballVelocity.x = (pushDirX / pushMag) * pushStrength;
     ballVelocity.z = (pushDirZ / pushMag) * pushStrength;
@@ -2240,8 +2417,16 @@ function restartGame() {
   if (isDemoRunning) {
     isDemoRunning = false;
   }
+  
+  // CRITICAL: Reset game state flags FIRST before anything else
+  isGameActive = true; 
+  ballWasReleased = false;
+  isBallHeld = false;
+  isFalling = false;
+  ballIsRolling = false;  
+  hasHitRim = false;
+  
   // 1. Reset Robot Angles (theta) and animation state
-  // Use defaults that match the HTML slider initial values so the UI and model align
   theta = [0, 0, 0, 30, -38, -30, 38, 0];
 
   animationPhase = ST_IDLE;
@@ -2250,28 +2435,28 @@ function restartGame() {
   // 2. Reset Robot Position
   robotPosX = 0.0;
 
-  // 3. Reset Ball Physics and Flags
-  isBallHeld = false;
-  isFalling = false;
-  ballIsRolling = false;  
-  hasHitRim = false;
-  ballVelocity = { x: 0, y: 0 };
-  isGameActive = true; 
-  ballWasReleased = false;
-
-  // 4. Reset Ball Position to its original starting spot (initial values)
-  BallPosX = -12.0,
-  BallPosY = -5.0,
+  // 3. Reset Ball Physics and Position IMMEDIATELY
+  ballVelocity = { x: 0, y: 0, z: 0 };
+  
+  // Reset Ball Position to its original starting spot (initial values)
+  BallPosX = -12.0;
+  BallPosY = -5.0;
   BallPosZ = 0.0;
   ballCurrentPos = vec3(BallPosX, BallPosY, BallPosZ);
 
-  // 5. Reset game variables (keep personalRecord)
+  // 4. Reset game variables (keep personalRecord)
   if (userRestart) userRestartGame();
 
-  // 6. Reset UI elements and controls
+  // 5. Reset UI elements and controls
   updateUI();
-  updateScoreDisplay(); // Update score display
+  updateScoreDisplay();
   GripControl(innerGripSlider, outerGripSlider);
+
+  // 6. IMPORTANT: Force a brief delay before allowing checkGameOver to run again
+  // This prevents the modal from re-triggering immediately
+  setTimeout(() => {
+    isGameActive = true; // Confirm it's active after everything is reset
+  }, 100);
 
   // 7. Re-render the scene
   draw();
@@ -2360,7 +2545,11 @@ function isBallOnStage() {
   
   // NEW: Subtract a small buffer (e.g., 0.5). 
   // If the ball gets too close to the edge, we say it's "off" and gravity takes over.
-  var safeZoneRadius = ballStageRadius - 0.2; // Tweak this number! Higher = falls sooner.
+  var safeZoneRadius = ballStageRadius - 0.5; // Tweak this number! Higher = falls sooner.
+
+  // ✅ NEW: Ball must be BETWEEN stage top and a reasonable upper limit
+  var isAtStageHeight = ballCurrentPos[1] >= (ballStageY - 0.2) && 
+                         ballCurrentPos[1] <= (ballStageY + 2.0); // Allow some height above
 
   return ballCurrentPos[1] >= ballStageY && distFromCenter <= safeZoneRadius;
 }
@@ -2368,6 +2557,9 @@ function isBallOnStage() {
 function checkGameOver() {
   // Skip game over checks during demo
   if (isDemoRunning) return;
+
+  // ⭐ NEW: Skip if ball is currently falling - let physics finish!
+  if (isFalling) return;
    
   // Skip if ball was intentionally released
   if (ballWasReleased) return;
@@ -2384,7 +2576,7 @@ function checkGameOver() {
                      ballCurrentPos[2] < basketFront;
    
   // GAME OVER TYPE 1: Ball pushed/rolled off the stage
-  if (!isBallHeld && !isBallOnStage() && !isInBasket && !isFalling) {
+  if (!isBallHeld && !isBallOnStage() && !isInBasket) {
     if (isGameActive) {   
       isGameActive = false;
       ballIsRolling = false;
