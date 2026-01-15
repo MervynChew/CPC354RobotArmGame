@@ -172,6 +172,11 @@ var gameStatusShowText;
 var userRestart = false;
 var loseGame = false;
 
+var restartDemo = false;
+let demoAnimationId = null; // To store the requestAnimationFrame ID
+var robotStartX;
+var pauseDemo = false;
+
 /*-----------------------------------------------------------------------------------*/
 // WebGL Utilities
 /*-----------------------------------------------------------------------------------*/
@@ -1099,6 +1104,7 @@ function getUIElement() {
   };
 
   // --- DEMO MODE CONTROLS ---
+  var pauseDemoBtn = document.getElementById("pause-demo-btn");
   var restartDemoBtn = document.getElementById("restart-demo-btn");
   var quitDemoBtn = document.getElementById("quit-demo-btn");
 
@@ -1118,7 +1124,32 @@ function getUIElement() {
 
   // Quit Demo Click
   quitDemoBtn.onclick = function() {
-      stopDemo(); // Returns to normal game state
+    stopDemo(); // Returns to normal game state
+  };
+
+  pauseDemoBtn.onclick = function() {
+    pauseDemo = !pauseDemo;
+
+    if (pauseDemo) {
+      // Pause the demo
+      cancelAnimationFrame(demoAnimationId);
+      pauseDemoBtn.innerHTML = "Continue Demo";
+      
+      // Use .color for text and clear the gradient to show the background color
+      pauseDemoBtn.style.backgroundImage = "none"; 
+      pauseDemoBtn.style.backgroundColor = "#059669"; // Your orange color
+      pauseDemoBtn.style.color = "#000000";           // Black text
+    } else {
+      // Continue the demo
+      pauseDemoBtn.innerHTML = "Pause Demo";
+      
+      // Reset properties to let the CSS file take over again
+      pauseDemoBtn.style.backgroundImage = "";
+      pauseDemoBtn.style.backgroundColor = ""; 
+      pauseDemoBtn.style.color = ""; 
+      
+      demoAnimationId = requestAnimationFrame(demo);
+    }
   };
 
   // 2. We use addEventListener to set the 'passive' flag to false
@@ -1140,29 +1171,6 @@ function getUIElement() {
     { passive: false }
   ); // This is the most important part!
 }
-
-// function letGoGrip() {
-//   const grabButton = document.getElementById("grab-button");
-//   isBallHeld = false;
-//   isFalling = true;
-//   isAnimationRunning = true; // Set once
-//   animationPhase = ST_DROPPING; // Set once
-
-//   // Capture the exact world position of the ball the moment it was let go
-//   ballCurrentPos = vec3(
-//     ballModelViewMatrix[0][3],
-//     ballModelViewMatrix[1][3],
-//     ballModelViewMatrix[2][3]
-//   );
-//   // IMPORTANT: This allows you to pick it up again!
-//   BallPosX = ballCurrentPos[0];
-//   BallPosY = ballCurrentPos[1];
-//   BallPosZ = ballCurrentPos[2];
-//   isBallHeld = false;
-//   grabButton.innerText = "Grab Ball";
-
-//   GripControl(innerGripSlider, outerGripSlider);
-// }
 
 // Helper: Show Custom Modal
 // takes a title, a message, and a function to run if the user clicks "CONFIRM"
@@ -1881,8 +1889,6 @@ function disableAllButton() {
   var grabBut = document.getElementById("grab-button");
   var demoBut = document.getElementById("demo-button");
  
-
-
   baseSlider.disabled = true;
   robotX.disabled = true;
   uArm.disabled = true;
@@ -1923,52 +1929,6 @@ function enableAllButton() {
   demoBut.disabled = false;
   restartBut.disabled = false;
 }
-
-// function releaseBall() {
-//   rotateGrip();
-//   ballCurrentPos[1] -= GRAVITY; // Move down
-
-//   // Stop at the floor
-//   if (ballCurrentPos[1] <= FLOOR_Y) {
-//     ballCurrentPos[1] = FLOOR_Y;
-//     BallPosY = ballCurrentPos[1];
-//     isFalling = false; // Stop the calculation
-//   }
-// }
-
-// function releaseBall() {
-//     rotateGrip();
-
-//     // Move ball down
-//     ballCurrentPos[1] -= GRAVITY;
-
-//     // Define the "Rim" of the basket
-//     var basketTop = BASKET_Y;
-
-//     // CHECK IF BALL IS OVER THE BASKET
-//     // If Ball X is between (BASKET_X - 1) and (BASKET_X + 1)
-//     var isOverBasket = Math.abs(ballCurrentPos[0] - BASKET_X) < (BASKET_SIZE / 2);
-
-//     if (isOverBasket) {
-//         // Stop falling when it hits the "bottom" of the basket
-//         if (ballCurrentPos[1] <= basketTop) {
-//             ballCurrentPos[1] = FLOOR_Y;
-//             isFalling = false;
-//             console.log("The Ball Drop in the basket.")
-//         }
-//     } else {
-//         // Otherwise, fall all the way to the floor
-//         if (ballCurrentPos[1] <= FLOOR_Y) {
-//             ballCurrentPos[1] = FLOOR_Y;
-//             isFalling = false;
-//             console.log("The Ball Drop on the floor.")
-//         }
-//     }
-
-//     BallPosX = ballCurrentPos[0];
-//     BallPosY = ballCurrentPos[1];
-//     BallPosZ = ballCurrentPos[2];
-// }
 
 function releaseBall() {
   fetchBallLocation();
@@ -2261,10 +2221,6 @@ function checkGripCenterCollision() {
   const ballX = ballMV[0][3];
   const ballY = ballMV[1][3];
   const ballZ = ballMV[2][3];
-
-  // console.log("Ball X:", ballX);
-  // console.log("Ball Y:", ballY);
-  // console.log("Ball Z:", ballZ);
 
   // 2. MOVE SENSOR DEEPER INTO THE PALM
   // Moving from 1.1 down to 0.6 pushes the "sensor" deeper between the fingers.
@@ -2600,12 +2556,14 @@ const DEMO_ST_UPPER_ARM = 2;
 const DEMO_ST_LOWER_ARM = 3;
 const DEMO_ST_INNER_GRIP = 4;
 const DEMO_ST_OUTER_GRIP = 5;
-const DEMO_ST_GRIP = 6;
-const DEMO_ST_GRIP_UPPER_ARM = 7;
-const DEMO_ST_GRIP_BASE_ROTATE = 8;
-const DEMO_ST_GRIP_ROBOT_MOVE = 9;
-const DEMO_ST_GRIP_LOWER_ARM = 10;
-const DEMO_ST_LETGO_GRIP = 11;
+const DEMO_ST_MOVE_ROBOT_REST = 6;
+const DEMO_ST_GRIP = 7;
+const DEMO_ST_GRIP_UPPER_ARM = 8;
+const DEMO_ST_GRIP_LOWER_ARM = 9;
+const DEMO_ST_GRIP_BASE_ROTATE = 10;
+const DEMO_ST_GRIP_ROBOT_MOVE = 11;
+const DEMO_ST_GRIP_LOWER_ARM_DOWN = 12;
+const DEMO_ST_LETGO_GRIP = 13;
 
 // Animation state
 let demoAnimationPhase = DEMO_ST_IDLE;
@@ -2616,67 +2574,90 @@ const DEMO_ROBOT_SPEED = 0.1;
 const DEMO_ARM_SPEED = 1.0;
 const DEMO_GRIP_SPEED = 1.5;
 
-// Target values
 const demoTargets = {
-  robotPosX: -4,
-  upperArm: 59,
-  lowerArm: 64,
-  innerUpper: 81,
-  innerBottom: -81,
-  outerUpper: -66,
-  outerBottom: 66,
+  robotPosX: -5,
+  upperArm: 40,
+  lowerArm: 90,
+  innerUpper:90,
+  innerBottom: -90,
+  outerUpper: -34,
+  outerBottom: 34,
   // Grip sequence targets
   gripUpperArm: 7,
   gripBaseRotation: 180,
   gripRobotPosX: 1.9,
   gripLowerArm: 40,
+  gripLowerArmDrop: 85,
 };
 
-// Start demo function
 function startDemo() {
-  showCustomConfirm(
-    "GAME DEMONSTRATION",
-    "Start Gameplay Demonstration?\n\nAll current progress will be lost!",
-    function() {
-        // 1. Swap Button Visibility
-        document.getElementById("game-controls").style.display = "none";
-        document.getElementById("demo-controls").style.display = "block";
+  // Only show confirmation dialog if not restarting
+  document.getElementById("pause-demo-btn").disabled = false;
+  if (!restartDemo) {
+    showCustomConfirm(
+      "GAME DEMONSTRATION",
+      "Start Gameplay Demonstration?\n\nAll current progress will be lost!",
+      function() {
+        initializeDemo();
+      }
+    );
+  } else {
+    // If restarting, just initialize directly
+    initializeDemo();
+  }
+}
 
-        // 2. Disable Demo Buttons initially (while animation runs)
-        document.getElementById("restart-demo-btn").disabled = true;
-        document.getElementById("quit-demo-btn").disabled = true;
+function initializeDemo() {
+  // Cancel any existing demo animation before starting new one
+  if (demoAnimationId) {
+    cancelAnimationFrame(demoAnimationId);
+  }
 
-        // 3. Start Demo
-        restartGame(); 
-        isDemoRunning = true;
-        demoAnimationPhase = DEMO_ST_MOVE_ROBOT;
-        disableAllButton(); // Disables sliders/keyboard
-        updateScoreDisplay(); 
-        requestAnimationFrame(demo);
-    }
-  );
+  // 1. Swap Button Visibility
+  document.getElementById("game-controls").style.display = "none";
+  document.getElementById("demo-controls").style.display = "block";
+
+  // 2. Set up restart button
+  const restart_demo = document.getElementById("restart-demo-btn");
+  restart_demo.onclick = function () {
+    restartDemo = true;
+    startDemo();
+  }
+
+  // 3. Start Demo
+  restartGame(); 
+
+  robotStartX = robotPosX;
+  isDemoRunning = true;
+  demoAnimationPhase = DEMO_ST_MOVE_ROBOT;
+  restartDemo = false; // Reset flag after using it
+  disableAllButton(); // Disables sliders/keyboard
+  updateScoreDisplay(); 
+  demoAnimationId = requestAnimationFrame(demo);
 }
 
 // Main demo animation function with switch case
 function demo() {
 
-  if (!isDemoRunning) return;
+  if (!isDemoRunning || pauseDemo) return;
 
   switch (demoAnimationPhase) {
     case DEMO_ST_MOVE_ROBOT:
-      // Move robot to target X position
-      if (Math.abs(robotPosX - demoTargets.robotPosX) > 0.05) {
-        if (robotPosX > demoTargets.robotPosX) {
-          robotPosX -= DEMO_ROBOT_SPEED;
-        } else {
-          robotPosX += DEMO_ROBOT_SPEED;
-        }
-        updateSlider("robot-x", robotPosX, "robot-x-text");
+    // Move robot halfway to target X position
+    const halfwayPoint = (robotStartX + demoTargets.robotPosX) / 2;
+    
+    if (Math.abs(robotPosX - halfwayPoint) > 0.05) {
+      if (robotPosX > halfwayPoint) {
+        robotPosX -= DEMO_ROBOT_SPEED;
       } else {
-        robotPosX = demoTargets.robotPosX;
-        demoAnimationPhase = DEMO_ST_UPPER_ARM;
+        robotPosX += DEMO_ROBOT_SPEED;
       }
-      break;
+      updateSlider("robot-x", robotPosX, "robot-x-text");
+    } else {
+      robotPosX = halfwayPoint;
+      demoAnimationPhase = DEMO_ST_UPPER_ARM;
+    }
+    break;
 
     case DEMO_ST_UPPER_ARM:
       // Rotate upper arm to target
@@ -2748,9 +2729,28 @@ function demo() {
       } else {
         theta[OUTER_UPPER_GRIPPER] = demoTargets.outerUpper;
         theta[OUTER_BOTTOM_GRIPPER] = demoTargets.outerBottom;
+        demoAnimationPhase = DEMO_ST_MOVE_ROBOT_REST;
+      }
+      break;
+
+
+    // Start add here
+    case DEMO_ST_MOVE_ROBOT_REST:
+      // Move robot the rest of the way to target X position
+      if (Math.abs(robotPosX - demoTargets.robotPosX) > 0.05) {
+        if (robotPosX > demoTargets.robotPosX) {
+          robotPosX -= DEMO_ROBOT_SPEED;
+        } else {
+          robotPosX += DEMO_ROBOT_SPEED;
+        }
+        updateSlider("robot-x", robotPosX, "robot-x-text");
+      } else {
+        robotPosX = demoTargets.robotPosX;
         demoAnimationPhase = DEMO_ST_GRIP;
       }
       break;
+
+    // Until here
 
     case DEMO_ST_GRIP:
       // 1. Snap fingers to the ball position
@@ -2788,9 +2788,28 @@ function demo() {
         updateSlider("uarm-slider", theta[UPPER_ARM], "uarm-text");
       } else {
         theta[UPPER_ARM] = demoTargets.gripUpperArm;
+        demoAnimationPhase = DEMO_ST_GRIP_LOWER_ARM;
+      }
+      break;
+
+
+
+    case DEMO_ST_GRIP_LOWER_ARM:
+      // Move lower arm to 40 degrees
+      if (Math.abs(theta[LOWER_ARM] - demoTargets.gripLowerArm) > 0.5) {
+        if (theta[LOWER_ARM] < demoTargets.gripLowerArm) {
+          theta[LOWER_ARM] += DEMO_ARM_SPEED;
+        } else {
+          theta[LOWER_ARM] -= DEMO_ARM_SPEED;
+        }
+        updateSlider("larm-slider", theta[LOWER_ARM], "larm-text");
+      } else {
+        theta[LOWER_ARM] = demoTargets.gripLowerArm;
+        // After positioning the lower arm, proceed to release the ball
         demoAnimationPhase = DEMO_ST_GRIP_BASE_ROTATE;
       }
       break;
+
 
     case DEMO_ST_GRIP_BASE_ROTATE:
       // Rotate base 180 degrees
@@ -2818,21 +2837,21 @@ function demo() {
         updateSlider("robot-x", robotPosX, "robot-x-text");
       } else {
         robotPosX = demoTargets.gripRobotPosX;
-        demoAnimationPhase = DEMO_ST_GRIP_LOWER_ARM;
+        demoAnimationPhase = DEMO_ST_GRIP_LOWER_ARM_DOWN;
       }
       break;
 
-    case DEMO_ST_GRIP_LOWER_ARM:
+    case DEMO_ST_GRIP_LOWER_ARM_DOWN:
       // Move lower arm to 40 degrees
-      if (Math.abs(theta[LOWER_ARM] - demoTargets.gripLowerArm) > 0.5) {
-        if (theta[LOWER_ARM] < demoTargets.gripLowerArm) {
-          theta[LOWER_ARM] += DEMO_ARM_SPEED;
-        } else {
+      if (Math.abs(theta[LOWER_ARM] - demoTargets.gripLowerArmDrop) > 0.5) {
+        if (theta[LOWER_ARM] > demoTargets.gripLowerArmDrop) {
           theta[LOWER_ARM] -= DEMO_ARM_SPEED;
+        } else {
+          theta[LOWER_ARM] += DEMO_ARM_SPEED;
         }
         updateSlider("larm-slider", theta[LOWER_ARM], "larm-text");
       } else {
-        theta[LOWER_ARM] = demoTargets.gripLowerArm;
+        theta[LOWER_ARM] = demoTargets.gripLowerArmDrop;
         // After positioning the lower arm, proceed to release the ball
         demoAnimationPhase = DEMO_ST_LETGO_GRIP;
       }
@@ -2857,6 +2876,7 @@ function demo() {
       // This lets the user choose what to do next
       document.getElementById("restart-demo-btn").disabled = false;
       document.getElementById("quit-demo-btn").disabled = false;
+      document.getElementById("pause-demo-btn").disabled = true;
 
       // 6. Ensure the falling animation keeps looping
       // Since demo stopped, we need to make sure the global loop is aware
@@ -2874,7 +2894,7 @@ function demo() {
 
   // Continue animation loop ONLY if still actively animating
   if (isDemoRunning && demoAnimationPhase !== DEMO_ST_IDLE) {
-    requestAnimationFrame(demo);
+    demoAnimationId = requestAnimationFrame(demo);
   }
 }
 
