@@ -488,20 +488,6 @@ button {
 }
 
 /* Demo Control Buttons */
-#pause-demo-btn {
-  /* Gradient: Soft orange to deep orange */
-  background: linear-gradient(135deg, #ffb347, #ffa500);
-  color: white;
-  /* Border: Transparent orange glow */
-  border: 2px solid rgba(255, 165, 0, 0.5);
-}
-
-#pause-demo-btn:hover {
-  transform: translateY(-1px);
-  /* Matching orange shadow glow */
-  box-shadow: 0 4px 12px rgba(255, 165, 0, 0.4);
-}
-
 #restart-demo-btn {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
@@ -674,7 +660,7 @@ button:disabled::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(10, 14, 39, 0.85); /* Dark dimming matching theme */
+  background: rgba(10, 14, 39, 0.85);
   backdrop-filter: blur(8px);
   z-index: 1000;
   display: flex;
@@ -716,7 +702,6 @@ button:disabled::before {
   font-size: 20px;
   font-weight: 900;
   text-align: center;
-  /* Using your gradient text style */
   background: linear-gradient(135deg, #f59e0b, #ef4444);
   -webkit-background-clip: text;
   background-clip: text;
