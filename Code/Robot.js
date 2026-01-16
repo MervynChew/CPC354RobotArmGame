@@ -20,6 +20,8 @@ const UARM_HEIGHT = 4.0;
 const UARM_WIDTH = 0.5;
 const LARM_HEIGHT = 4.0;
 const LARM_WIDTH = 0.5;
+
+// Robot Component Matrices and Scaling Factors
 var scaleBaseBody, scaleUpperArm, scaleLowerArm;
 var instanceMatrixBase, instanceMatrixUArm, instanceMatrixLArm;
 var baseBodySlider, upperArmSlider, lowerArmSlider;
@@ -29,7 +31,7 @@ var theta = [0, 0, 0, 30, -38, -30, 38, 0],
   colors = [];
   normals = [];
 
-// Here is add de
+// Gripper's Dimensions and Constants
 const INNER_UPPER_GRIPPER = 3;
 const OUTER_UPPER_GRIPPER = 4;
 const INNER_BOTTOM_GRIPPER = 5;
@@ -44,6 +46,7 @@ const INNERBOTTOM_GRIP_WIDTH = 0.3;
 const OUTERBOTTOM_GRIP_HEIGHT = 1.0;
 const OUTERBOTTOM_GRIP_WIDTH = 0.3;
 
+// Color Palettes of the robot components
 const PRIMARY_PALETTE = [
     vec4(0.25, 0.25, 0.28, 1.0), // Front 
     vec4(0.75, 0.75, 0.88, 1.0), // Back
@@ -52,8 +55,6 @@ const PRIMARY_PALETTE = [
     vec4(0.08, 0.08, 0.10, 1.0), // Right 
     vec4(0.75, 0.75, 0.88, 1.0)  // Left 
 ];
-
-
 
 const SECONDARY_PALETTE = [
     vec4(0.40, 0.00, 1.00, 1.0), // Front
@@ -64,6 +65,7 @@ const SECONDARY_PALETTE = [
     vec4(0.20, 0.00, 0.90, 1.0)  // Left
 ];
 
+// More grippers variables
 var scaleInnerUpperGrip,
   scaleOuterUpperGrip,
   scaleInnerBottomGrip,
@@ -82,29 +84,30 @@ var innerUpperSlider,
   outerGripSlider,
   outerGripText;
 
+// Camera and View Variables
 var zoomObject = 1.0;
 var autoResetTimer = null;
-
 var viewRotationX = -1;
 var viewRotationY = 0;
 var dragging = false;
 var lastMouseX = 0;
 var lastMouseY = 0;
 
+// Geometric Shape Buffer Variables
 var cubeLength = 0;
-const WRIST_SPHERE_RADIUS = 0.4; // Slightly wider than the arm (0.5)
-
+const WRIST_SPHERE_RADIUS = 0.4;
 var floorStart = 0;
 var floorCount = 0;
 
+// Shader Uniform Locations
 var isBallLoc, colColorLoc;
 
+// Robots Position
 var robotPosX = 0.0;
-
 var wristMatrix = mat4();
 
+// Ball Variables
 var isBallHeld = false;
-
 var BallPosX = -12.0,
   BallPosY = -5.0,
   BallPosZ = 0.0;
@@ -119,22 +122,23 @@ const BASKET_Z = 0.0;
 const BASKET_SIZE = 4.0; // How big the "box" is
 const BASKET_HEIGHT = 3.5;
 var basketModelViewMatrix;
-// Add this with your other gripper constants
+
+// Gripper Center Position for Collision Detection
 const CLAW_CENTER = INNERUPPER_GRIP_HEIGHT + OUTERUPPER_GRIP_HEIGHT * 0.5;
 
 var isFalling = false;
 
-const FLOOR_Y = -5.4; // The level of your "ground"
+const FLOOR_Y = -5.4; // The level of the "ground"
 const GRIPDROPROTATIONSPEED = 0.75;
 
-// Collision detection
+// Stage (Platform) Variables
 var isGameActive = true;
 var ballStageX = -12.0;  // Fixed X position of stage
 var ballStageY = -5.0;   // Height of the stage platform (at ground level)
 var ballStageZ = 0.0;    // Fixed Z position of stage
 var ballStageVisualRadius = 4.0;  // Radius of the circular stage
 
-// Collision detection
+// Collision Detection
 var ballStageRadius = 2.4;  // For physics (matches what player sees)
 
 // Ball physics for rolling
@@ -145,7 +149,7 @@ var ballRotation = { x: 0, y: 0, z: 0 };
 var ballWasReleased = false; // Track if ball was intentionally released
 var gameOverTimer = null; // Track the auto-reset timer for game over
 
-// Animation
+// Animation States
 const ST_IDLE = 0;
 const ST_DROPPING = 1;
 const ST_RECOVERING = 2;
@@ -198,6 +202,7 @@ window.onload = function init() {
   points = cube.Point;
   normals = cube.Normal || [];
 
+  // Apply colors to cube faces
   colors = [];
   const verticesPerFace = 6;
   for (let face = 0; face < 6; face++) {
@@ -207,10 +212,12 @@ window.onload = function init() {
   }
   cubeLength = cube.Point.length;
 
+  // Add sphere for ball and connectors
   var ball = sphere(7);
   points = points.concat(ball.Point);
   colors = colors.concat(ball.Color);
 
+  // Calculate sphere normals for the lighting
   var ballNormals = ball.Point.map(function(p) {
     var len = Math.sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
     return vec3(p[0]/len, p[1]/len, p[2]/len);
@@ -220,7 +227,7 @@ window.onload = function init() {
   sphereStart = cubeLength;
   sphereCount = ball.Point.length;
 
-  // Add cylinder for stage
+  // Add small cylinder to act as a stage for the ball
   var stageCylinder = cylinder(36, 1, true);  // 36 slices, 1 stack, with caps
   points = points.concat(stageCylinder.Point);
   colors = colors.concat(stageCylinder.Point.map(() => vec4(0.2, 0.2, 0.22, 1.0)));
@@ -229,6 +236,7 @@ window.onload = function init() {
   cylinderStart = sphereStart + sphereCount;
   cylinderCount = stageCylinder.Point.length;
 
+  // Add the floor geometry
   var floorCube = colorCube();
   points = points.concat(floorCube.Point);
   colors = colors.concat(floorCube.Point.map(() => vec4(0.35, 0.37, 0.40, 1.0))); // Dark gray floor
@@ -245,6 +253,7 @@ window.onload = function init() {
   draw();
 };
 
+// Set up the mouse and keyboard event listeners
 function controller() {
   canvas = document.getElementById("gl-canvas");
   canvas.onmousedown = mousedown;
@@ -254,6 +263,7 @@ function controller() {
   window.addEventListener('keydown', handleKeyDown);
 }
 
+// Mouse Drag Controls for the Camera View Rotation
 function mousedown(event) {
   dragging = true;
   lastMouseX = event.clientX;
@@ -603,9 +613,7 @@ function handleKeyDown(event) {
 // ADVANCED "SOLID BODY" COLLISION DETECTION (v6.0 - Enhanced Stage Protection)
 /*-----------------------------------------------------------------------------------*/
 
-// 1. Core Physics Check: Does a sphere at (x,y,z) hit anything?
-// 1. Core Physics Check: Does a sphere at (x,y,z) hit anything?
-// Added 'skipFloor' parameter (defaults to false if not provided)
+// 1. Core sphere collision check against floor, stage, ball, and basket
 function isSphereColliding(x, y, z, radius, skipFloor = false) {
     
     // --- A. FLOOR COLLISION ---
@@ -672,17 +680,16 @@ function checkProposedMove(newTheta, newRobotX) {
   m = mult(m, rotateY(newTheta[BASE_BODY]));    
   
   // We use the EXACT visual dimensions of the base
-  let baseHalfWidth = 2.5; // Matches BASE_WIDTH / 2
-  let baseHeight = 2.0;    // Matches BASE_HEIGHT
+  let baseHalfWidth = 2.5;
+  let baseHeight = 2.0;
   let baseHalfDepth = 2.5; 
   
-  // 1. Check Corners against Stage/Wall
+  // Check Corners against Stage/Wall
   let basePoints = [
       vec3( baseHalfWidth, baseHeight,  baseHalfDepth), 
       vec3( baseHalfWidth, baseHeight, -baseHalfDepth), 
       vec3(-baseHalfWidth, baseHeight,  baseHalfDepth), 
       vec3(-baseHalfWidth, baseHeight, -baseHalfDepth),
-      // Bottom Corners (Raised slightly to 0.2 to avoid floor friction, but catch stage wall)
       vec3( baseHalfWidth, 0.2,  baseHalfDepth), 
       vec3( baseHalfWidth, 0.2, -baseHalfDepth), 
       vec3(-baseHalfWidth, 0.2,  baseHalfDepth), 
@@ -698,7 +705,7 @@ function checkProposedMove(newTheta, newRobotX) {
       if (isSphereColliding(px, py, pz, 0.1, true)) return true;
   }
   
-  // 2. Base vs Basket (The Logic you liked, with tuned margin)
+  // Base vs Basket collision check
   let baseCenterX = m[0][3];
   let baseCenterY = m[1][3] + baseHeight / 2;
   let baseCenterZ = m[2][3];
@@ -726,6 +733,7 @@ function checkProposedMove(newTheta, newRobotX) {
   // ==========================================
   // Section 2 & 3: ARMS (Normal Checks)
   // ==========================================
+  // Upper Arm Collision Check
   let armRadius = 0.25; 
   m = mult(m, translate(0.0, BASE_HEIGHT, 0.0)); 
   let pShoulder = vec3(m[0][3], m[1][3], m[2][3]);
@@ -735,6 +743,7 @@ function checkProposedMove(newTheta, newRobotX) {
   
   if (checkSegmentCollision(pShoulder, pElbow, armRadius, 5)) return true;
 
+  // Lower Arm Collision Check
   let m_lower = mult(m_elbow, rotateZ(newTheta[LOWER_ARM]));
   let m_wrist = mult(m_lower, translate(0.0, LARM_HEIGHT, 0.0));
   let pWrist = vec3(m_wrist[0][3], m_wrist[1][3], m_wrist[2][3]);
@@ -744,6 +753,7 @@ function checkProposedMove(newTheta, newRobotX) {
   // ==========================================
   // 4. CLAW / GRIPPER (Detailed Finger Physics)
   // ==========================================
+  // Gripper Collision Check
   let m_wristRotated = mult(m_wrist, rotateY(newTheta[WRIST_Z]));
   
   // Helper to calculate positions of Knuckle (Joint) and Tip
@@ -815,6 +825,7 @@ function checkProposedMove(newTheta, newRobotX) {
   return false; 
 }
 
+// Update component color palette
 function setComponentColor(palette) {
     const colorArray = [];
     for (let face = 0; face < 6; face++) {
@@ -824,8 +835,6 @@ function setComponentColor(palette) {
     }
 
     gl.bindBuffer(gl.ARRAY_BUFFER, colBuffer);
-
-    // 👇 ONLY overwrite cube colors
     gl.bufferSubData(
         gl.ARRAY_BUFFER,
         0, // offset (cube starts at 0)
@@ -838,6 +847,7 @@ function getUIElement() {
   canvas = document.getElementById("gl-canvas");
   const el = document.getElementById("main-container");
 
+  // Robot joint sliders
   baseBodySlider = document.getElementById("base-slider");
   baseBodyText = document.getElementById("base-text");
   upperArmSlider = document.getElementById("uarm-slider");
@@ -845,7 +855,7 @@ function getUIElement() {
   lowerArmSlider = document.getElementById("larm-slider");
   lowerArmText = document.getElementById("larm-text");
 
-  // Here i add de
+
   canvas = document.getElementById("gl-canvas");
   const container = document.getElementById("main-container");
 
@@ -911,7 +921,7 @@ function getUIElement() {
       draw();
   }
 
-  // --- NEW HELPER FOR ROBOT X SLIDER ---
+  // --- HELPER FOR ROBOT X SLIDER ---
   function handleRobotXUpdate(event, textElement, sliderElement) {
       var oldVal = robotPosX;
       var targetVal = parseFloat(event.target.value);
@@ -998,7 +1008,6 @@ function getUIElement() {
     theta[INNER_BOTTOM_GRIPPER] = -requestedTheta;
     
     // Check for self-collision (grippers touching each other)
-    // Note: We keep your original logic here for finger-to-finger limits
     if (checkGripCenterCollision()) {
       theta[INNER_UPPER_GRIPPER] = oldInnerTheta;
       theta[INNER_BOTTOM_GRIPPER] = oldInnerBottomTheta;
@@ -1067,6 +1076,7 @@ function getUIElement() {
     handleSliderUpdate(WRIST_Z, event, wristZText, wristZSlider);
   };
 
+  // GRAB/RELEASE BUTTON
   const grabButton = document.getElementById("grab-button");
   grabButton.onclick = function () {
     if (!isBallHeld) {
@@ -1077,9 +1087,10 @@ function getUIElement() {
     draw();
   };
 
+  // RESTART BUTTON with confirmation modal
   var restartBtn = document.getElementById("restart-button");
   restartBtn.onclick = function () {
-    // Call our new custom function
+    // Call custom function
     showCustomConfirm(
       "RESTART GAME", 
       "Are you sure you want to restart?\n\nYour current win streak will be lost!", 
@@ -1135,10 +1146,10 @@ function getUIElement() {
       cancelAnimationFrame(demoAnimationId);
       pauseDemoBtn.innerHTML = "Continue Demo";
       
-      // Use .color for text and clear the gradient to show the background color
+      // Override properties to keep the button looking "active"
       pauseDemoBtn.style.backgroundImage = "none"; 
-      pauseDemoBtn.style.backgroundColor = "#059669"; // Your orange color
-      pauseDemoBtn.style.color = "#000000";           // Black text
+      pauseDemoBtn.style.backgroundColor = "#059669";
+      pauseDemoBtn.style.color = "#000000";
     } else {
       // Continue the demo
       pauseDemoBtn.innerHTML = "Pause Demo";
@@ -1236,9 +1247,7 @@ function showGameOver(message) {
     gameScore = 0; // Reset score on failure
     isGameActive = false; // CRITICAL: Re-enable game state
     ballWasReleased = false; // Reset release flag
-
-    
-    
+  
     restartGame();
     console.log("helo");
     enableAllButton();
@@ -1247,6 +1256,7 @@ function showGameOver(message) {
   };
 }
 
+// Release the ball from the gripper
 function letGoGrip() {
   const grabButton = document.getElementById("grab-button");
   isBallHeld = false;
@@ -1255,7 +1265,6 @@ function letGoGrip() {
   animationPhase = ST_DROPPING;
   ballWasReleased = true;
 
-  // FIXED: Extract world position by removing view rotation influence
   // When ball is held, ballModelViewMatrix = wristMatrix * translate(0, CLAW_CENTER*0.5, 0)
   // wristMatrix already includes viewRotationX and viewRotationY at the beginning
  
@@ -1290,7 +1299,7 @@ function letGoGrip() {
   console.log("Ball released at world position:", BallPosX, BallPosY, BallPosZ);
 }
 
-
+// Grab the ball with the gripper
 function gripBall() {
   const grabButton = document.getElementById("grab-button");
   // ONLY GRAB IF COLLIDING (The "Green" logic)
@@ -1298,8 +1307,8 @@ function gripBall() {
     isBallHeld = true;
     grabButton.innerText = "Release Ball";
 
-    // OPTIONAL: Automatically close fingers to "touch" the ball
-    theta[INNER_UPPER_GRIPPER] = 55; // Adjust based on your model
+    // Automatically close fingers to "touch" the ball
+    theta[INNER_UPPER_GRIPPER] = 55;
     theta[INNER_BOTTOM_GRIPPER] = -55;
     theta[OUTER_UPPER_GRIPPER] = -38;
     theta[OUTER_BOTTOM_GRIPPER] = 38;
@@ -1323,7 +1332,7 @@ function configWebGL() {
 
   // Set the viewport and clear color (subtle blue-gray instead of white)
   gl.viewport(0, 0, canvas.width, canvas.height);
-  gl.clearColor(0.96, 0.96, 0.98, 1.0);  // ← CHANGED: Better background
+  gl.clearColor(0.96, 0.96, 0.98, 1.0);
 
   // Enable hidden-surface removal
   gl.enable(gl.DEPTH_TEST);
@@ -1372,7 +1381,7 @@ function configWebGL() {
   isBallLoc = gl.getUniformLocation(program, "isBall");
   colColorLoc = gl.getUniformLocation(program, "collisionColor");
   
-  // Set Light Properties IMMEDIATELY
+  // Set Light Properties
   // Position light above and to the side for good shadows
   gl.uniform3fv(lightPositionLoc, flatten(vec3(8.0, 12.0, 8.0)));
   gl.uniform3fv(lightColorLoc, flatten(vec3(1.0, 0.98, 0.95)));
@@ -1398,7 +1407,6 @@ function render() {
   // Pass the projection matrix from JavaScript to the GPU for use in shader
   // ortho(left, right, bottom, top, near, far)
 
-  // If zoomObject = 0.5, we see from -32 to 32 (Zoomed Out)
   let left = -16 / zoomObject;
   let right = 16 / zoomObject;
   let bottom = -9 / zoomObject;
@@ -1406,8 +1414,6 @@ function render() {
 
   projectionMatrix = ortho(left, right, bottom, top, -10, 10);
   gl.uniformMatrix4fv(projectionMatrixLoc, false, flatten(projectionMatrix));
-  // projectionMatrix = ortho(-16, 16, -9, 9, -10, 10);
-  // gl.uniformMatrix4fv(projectionMatrixLoc, false, flatten(projectionMatrix));
 
   // Set the instance matrix for each figure part
   scaleBaseBody = scale(BASE_WIDTH, BASE_HEIGHT, BASE_WIDTH);
@@ -1475,7 +1481,6 @@ function render() {
   );
   instanceMatrixWristConn = scaleWristConn;
 
-  // Draw the primitive / geometric shape
   draw();
 }
 
@@ -1520,6 +1525,7 @@ function draw() {
   // Move to Lower Arm and draw
   modelViewMatrix = mult(modelViewMatrix, translate(0.0, UARM_HEIGHT, 0.0));
 
+  // Draw elbow connector sphere
   gl.uniform1i(isBallLoc, true);
   gl.uniform4fv(colColorLoc, flatten(vec4(0.7, 0.7, 0.7, 1.0))); // Gray sphere
   var elbowConnectorMatrix = mult(modelViewMatrix, scaleWristConn);
@@ -1580,18 +1586,15 @@ function draw() {
   modelViewMatrix = mult(modelViewMatrix, rotateZ(theta[OUTER_BOTTOM_GRIPPER]));
   OuterBottomGrip();
 
-  // 2. DRAW BALL
+  // DRAW BALL
   gl.uniform1i(isBallLoc, true);
 
   if (isBallHeld) {
     gl.uniform4fv(colColorLoc, flatten(vec4(0.0, 0.0, 1.0, 1.0))); // Blue
-    // Position ball relative to the wristMatrix captured above
-    // ballModelViewMatrix = mult(wristMatrix, translate(0.0, OUTERUPPER_GRIP_HEIGHT * 0.5, 0.0));
     ballModelViewMatrix = mult(
       wristMatrix,
       translate(0.0, CLAW_CENTER * 0.5, 0.0)
     );
-    // I change here
   } else {
     if (ballIsRolling) updateBallRolling(); // Handle rolling FIRST
     if (isFalling) releaseBall();           // Then handle falling
@@ -1633,16 +1636,14 @@ function draw() {
   modelViewMatrix = basketModelViewMatrix;
 
   // PASS 1: Draw the Inner Fill (Slightly Transparent)
-  gl.uniform4fv(colColorLoc, flatten(vec4(0.6, 0.3, 0.1, 0.2))); // Alpha 0.2
+  gl.uniform4fv(colColorLoc, flatten(vec4(0.6, 0.3, 0.1, 0.2)));
   basket(false); // Call with drawOutline = false
 
   // PASS 2: Draw the Outline (Fully Opaque)
-  gl.uniform4fv(colColorLoc, flatten(vec4(0.6, 0.3, 0.1, 1.0))); // Alpha 1.0
+  gl.uniform4fv(colColorLoc, flatten(vec4(0.6, 0.3, 0.1, 1.0)));
   basket(true); // Call with drawOutline = true
 
   gl.disable(gl.BLEND); // Good practice to disable after use
-
-  // End Draw Basket
 
   // Draw stage platform (circular cylinder)
   gl.uniform1i(isBallLoc, true);
@@ -1670,7 +1671,6 @@ function draw() {
   floorMatrix = mult(floorMatrix, rotateX(viewRotationX));
   floorMatrix = mult(floorMatrix, rotateY(viewRotationY));
   floorMatrix = mult(floorMatrix, translate(0, FLOOR_Y - 0.1, 0)); // Just below floor level
-  // Scale: make it very wide (X), very thin (Y), and deep (Z)
   floorMatrix = mult(floorMatrix, scale(40, 0.2, 40));
 
   modelViewMatrix = floorMatrix;
@@ -1686,7 +1686,7 @@ function draw() {
     window.requestAnimationFrame(draw);
   }
 
-    // Check for Game Over Type 1 (ball off stage) only when appropriate
+  // Check for Game Over Type 1 (ball off stage) only when appropriate
   if (!isBallHeld && !isFalling) {
     checkGameOver();
   }
@@ -1898,11 +1898,9 @@ function disableAllButton() {
   wrist.disabled = true;
   grabBut.disabled = true;
   demoBut.disabled = true;
-
 }
 
 function enableAllButton() {
-  // do not enable buttons if demo is currently running
   if (isDemoRunning) {
     return;
   }
@@ -1930,6 +1928,7 @@ function enableAllButton() {
   restartBut.disabled = false;
 }
 
+// Handles the ball falling physics with gravity and bouncing
 function releaseBall() {
   fetchBallLocation();
   rotateGrip();
@@ -1940,7 +1939,7 @@ function releaseBall() {
   // Update position based on velocity
   ballCurrentPos[1] += ballVelocity.y;
   ballCurrentPos[0] += ballVelocity.x;
-  ballCurrentPos[2] += ballVelocity.z || 0; // Maintain Z momentum if it exists
+  ballCurrentPos[2] += ballVelocity.z || 0;
 
   // Basket dimensions
   const basketTop = BASKET_Y;
@@ -2156,7 +2155,7 @@ function rotateGrip() {
         theta[WRIST_Z] -= GRIPDROPROTATIONSPEED;
       } else {
         theta[WRIST_Z] = -180;
-        animationPhase = ST_RECOVERING; // Now it can actually switch!
+        animationPhase = ST_RECOVERING;
       }
       break;
 
@@ -2185,6 +2184,7 @@ function rotateGrip() {
   }
 }
 
+// Determine which side of the gripper the ball is on
 function getBallSide() {
   // 1. Get Ball World Position (using your existing logic)
   var ballMV = mult(mult(rotateX(viewRotationX), rotateY(viewRotationY)), translate(ballCurrentPos[0], ballCurrentPos[1], ballCurrentPos[2])
@@ -2209,10 +2209,7 @@ function getBallSide() {
   }
 }
 
-/**
- * Checks if the robotic gripper (Box) intersects with the target ball (Sphere).
- * This uses the "Clamping" logic you provided.
- */
+// Check if gripper center collides with ball for grabbing
 function checkGripCenterCollision() {
   // 1. BALL WORLD POSITION
   var ballMV = mult(mult(rotateX(viewRotationX), rotateY(viewRotationY)), translate(BallPosX, BallPosY, BallPosZ)
@@ -2239,9 +2236,6 @@ function checkGripCenterCollision() {
   const gripX = gripCenterMatrix[0][3];
   const gripY = gripCenterMatrix[1][3];
   const gripZ = gripCenterMatrix[2][3];
-  // console.log("Sweet Spot X:", gripX);
-  // console.log("Sweet Spot Y:", gripY);
-  // console.log("Sweet Spot Z:", gripZ);
 
   // 3. DISTANCE CALCULATION
   const dist = Math.sqrt(
@@ -2249,12 +2243,10 @@ function checkGripCenterCollision() {
   );
 
   // 4. THE "STRICT GRIP" LOGIC
-  // We use a smaller captureRadius (e.g., 1.3).
   // This forces the ball's center to be very close to the palm's center.
   const captureRadius = 1;
 
   // This triggers only when the ball is mostly "swallowed" by the gripper bubble
-  // return (dist + (ballRadius * 0.5)) < captureRadius;
   return dist < captureRadius && theta[INNER_UPPER_GRIPPER] > 60 && theta[OUTER_UPPER_GRIPPER] > -35;
 }
 
@@ -2273,7 +2265,6 @@ function checkArmBallCollision() {
     (gripZ - ballCurrentPos[2]) ** 2
   );
   
-  // FIX: Reduced threshold from (ballRadius + 1.0) to (ballRadius + 0.4)
   // This ensures the arm must visually touch the ball before it moves.
   return dist < (ballRadius + 0.4);
 }
@@ -2282,7 +2273,6 @@ function checkArmBallCollision() {
 function triggerBallRolling() {
   if (ballIsRolling || !isGameActive) return;
   
-  // console.log("Ball was touched by the arm!"); // Optional debug
   ballIsRolling = true;
   
   // 1. Calculate Vector
@@ -2294,8 +2284,6 @@ function triggerBallRolling() {
   var pushMag = Math.sqrt(pushDirX ** 2 + pushDirZ ** 2);
   
   if (pushMag > 0.01) {
-    // REDUCED FORCE: Changed 0.15 to 0.08
-    // This makes the push gentler so it doesn't fly off the stage instantly
     var pushStrength = 0.10; 
     
     ballVelocity.x = (pushDirX / pushMag) * pushStrength;
@@ -2308,6 +2296,7 @@ function triggerBallRolling() {
   }
 }
 
+// Update score based on game state
 function scoreCount() {
   // Skip scoring during demo
   if (isDemoRunning) {
@@ -2316,7 +2305,7 @@ function scoreCount() {
   }
 
   if (gameStatus) {
-    // SUCCESS: Auto-reset after 5 seconds
+    // Success: Auto-reset after 5 seconds
     gameScore++;
     if (gameScore >= personalRecord) personalRecord = gameScore;
     console.log("Game score:", gameScore);
@@ -2327,16 +2316,15 @@ function scoreCount() {
       enableAllButton();
     }, 5000);
   } else {
-    // FAIL: No auto-reset, user must click OK on alert
+    // Fail: No auto-reset, user must click OK on alert
     gameScore = 0;
-    // Removed: setTimeout(restartGame, 5000);
   }
 
   updateScoreDisplay();
 }
 
 
-// function to update the score display
+// Update the score display UI
 function updateScoreDisplay() {
   var winCount = document.getElementById("win-count");
   var personalBestText = document.getElementById("game-personal-best-text");
@@ -2367,14 +2355,14 @@ function updateScoreDisplay() {
   }
 }
 
-
+// Reset the game to initial state
 function restartGame() {
   // If demo was running, end it now
   if (isDemoRunning) {
     isDemoRunning = false;
   }
   
-  // CRITICAL: Reset game state flags FIRST before anything else
+  // Reset game state flags
   isGameActive = true; 
   ballWasReleased = false;
   isBallHeld = false;
@@ -2408,8 +2396,8 @@ function restartGame() {
   updateScoreDisplay();
   GripControl(innerGripSlider, outerGripSlider);
 
-  // 6. IMPORTANT: Force a brief delay before allowing checkGameOver to run again
-  // This prevents the modal from re-triggering immediately
+  // 6. Force a brief delay before allowing checkGameOver to run again
+  // Prevents the modal from re-triggering immediately
   setTimeout(() => {
     isGameActive = true; // Confirm it's active after everything is reset
   }, 100);
@@ -2418,6 +2406,7 @@ function restartGame() {
   draw();
 }
 
+// Handle full game restart (includes score reset)
 function userRestartGame() {
   gameStatus = false;
   gameScore = 0;
@@ -2426,14 +2415,13 @@ function userRestartGame() {
 
 
   // Reset viewing angle to original position
-  viewRotationX = 0;
+  viewRotationX = -1;
   viewRotationY = 0;
  
   // Reset zoom to original
   zoomObject = 1.0;
 
   var personalBestText = document.getElementById("game-personal-best-text");
-  // personalBestText.innerHTML = 0;
   if (personalBestText) personalBestText.innerHTML = 0;
 }
 
@@ -2497,19 +2485,16 @@ function isBallOnStage() {
     (ballCurrentPos[2] - ballStageZ) ** 2
   );
   
-  // CURRENT: return ballCurrentPos[1] >= ballStageY && distFromCenter <= ballStageRadius;
-  
-  // NEW: Subtract a small buffer (e.g., 0.5). 
   // If the ball gets too close to the edge, we say it's "off" and gravity takes over.
-  var safeZoneRadius = ballStageRadius - 0.5; // Tweak this number! Higher = falls sooner.
+  var safeZoneRadius = ballStageRadius - 0.5;
 
-  // ✅ NEW: Ball must be BETWEEN stage top and a reasonable upper limit
   var isAtStageHeight = ballCurrentPos[1] >= (ballStageY - 0.2) && 
-                         ballCurrentPos[1] <= (ballStageY + 2.0); // Allow some height above
+                         ballCurrentPos[1] <= (ballStageY + 2.0);
 
   return ballCurrentPos[1] >= ballStageY && distFromCenter <= safeZoneRadius;
 }
 
+// Check for game over conditions
 function checkGameOver() {
   // Skip game over checks during demo
   if (isDemoRunning) return;
@@ -2792,8 +2777,6 @@ function demo() {
       }
       break;
 
-
-
     case DEMO_ST_GRIP_LOWER_ARM:
       // Move lower arm to 40 degrees
       if (Math.abs(theta[LOWER_ARM] - demoTargets.gripLowerArm) > 0.5) {
@@ -2859,20 +2842,19 @@ function demo() {
 
     case DEMO_ST_LETGO_GRIP:
       // 1. Force a draw to sync the matrices
-      // (This makes sure the ball's "release point" is accurate)
       draw();
 
       // 2. Perform the actual release logic
       letGoGrip();
 
-      // 3. IMPORTANT: Reset the rim collision flag for the new drop
+      // 3. Reset the rim collision flag for the new drop
       hasHitRim = false;
       ballVelocity = { x: 0, y: 0 }; // Start with no horizontal movement
 
       // 4. End Demo but keep draw() running for the fall
       demoAnimationPhase = DEMO_ST_IDLE;
 
-      // 5. IMPORTANT: Enable the Demo Control Buttons
+      // 5. Reset the Demo Control Buttons
       // This lets the user choose what to do next
       document.getElementById("restart-demo-btn").disabled = false;
       document.getElementById("quit-demo-btn").disabled = false;
