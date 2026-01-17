@@ -148,6 +148,7 @@ var ballRotation = { x: 0, y: 0, z: 0 };
 
 var ballWasReleased = false; // Track if ball was intentionally released
 var gameOverTimer = null; // Track the auto-reset timer for game over
+var lastRobotCollisionTime = 0; 
 
 // Animation States
 const ST_IDLE = 0;
@@ -510,7 +511,15 @@ function handleKeyDown(event) {
         theta[OUTER_UPPER_GRIPPER] = Math.max(-90, theta[OUTER_UPPER_GRIPPER]); // Clamp to min
         theta[OUTER_BOTTOM_GRIPPER] = -theta[OUTER_UPPER_GRIPPER];
         
-        if (checkProposedMove(theta, robotPosX)) {
+        // Force draw to update matrices
+        draw();
+        
+        // Check self-collision first
+        if (checkOuterGripperCollision()) {
+          theta[OUTER_UPPER_GRIPPER] = oldOuterTheta;
+          theta[OUTER_BOTTOM_GRIPPER] = oldOuterBottomTheta;
+          console.log("Outer grippers would collide!");
+        } else if (checkProposedMove(theta, robotPosX)) {
           theta[OUTER_UPPER_GRIPPER] = oldOuterTheta;
           theta[OUTER_BOTTOM_GRIPPER] = oldOuterBottomTheta;
         } else {
@@ -532,7 +541,15 @@ function handleKeyDown(event) {
         theta[OUTER_UPPER_GRIPPER] = Math.min(0, theta[OUTER_UPPER_GRIPPER]); // Clamp to max
         theta[OUTER_BOTTOM_GRIPPER] = -theta[OUTER_UPPER_GRIPPER];
         
-        if (checkProposedMove(theta, robotPosX)) {
+        // Force draw to update matrices
+        draw();
+        
+        // Check self-collision first
+        if (checkOuterGripperCollision()) {
+          theta[OUTER_UPPER_GRIPPER] = oldOuterTheta;
+          theta[OUTER_BOTTOM_GRIPPER] = oldOuterBottomTheta;
+          console.log("Outer grippers would collide!");
+        } else if (checkProposedMove(theta, robotPosX)) {
           theta[OUTER_UPPER_GRIPPER] = oldOuterTheta;
           theta[OUTER_BOTTOM_GRIPPER] = oldOuterBottomTheta;
         } else {
@@ -693,7 +710,25 @@ function checkProposedMove(newTheta, newRobotX) {
       vec3( baseHalfWidth, 0.2,  baseHalfDepth), 
       vec3( baseHalfWidth, 0.2, -baseHalfDepth), 
       vec3(-baseHalfWidth, 0.2,  baseHalfDepth), 
-      vec3(-baseHalfWidth, 0.2, -baseHalfDepth)
+      vec3(-baseHalfWidth, 0.2, -baseHalfDepth),
+
+      // Top face edges
+      vec3( baseHalfWidth, baseHeight, 0),           // Right edge center
+      vec3(-baseHalfWidth, baseHeight, 0),           // Left edge center
+      vec3(0, baseHeight,  baseHalfDepth),           // Front edge center
+      vec3(0, baseHeight, -baseHalfDepth),           // Back edge center
+      
+      // Bottom face edges
+      vec3( baseHalfWidth, 0.2, 0),                  // Right edge center
+      vec3(-baseHalfWidth, 0.2, 0),                  // Left edge center
+      vec3(0, 0.2,  baseHalfDepth),                  // Front edge center
+      vec3(0, 0.2, -baseHalfDepth),                  // Back edge center
+      
+      // Vertical edges
+      vec3( baseHalfWidth, baseHeight/2,  baseHalfDepth),  // Front-right
+      vec3( baseHalfWidth, baseHeight/2, -baseHalfDepth),  // Back-right
+      vec3(-baseHalfWidth, baseHeight/2,  baseHalfDepth),  // Front-left
+      vec3(-baseHalfWidth, baseHeight/2, -baseHalfDepth)   // Back-left
   ];
   
   for (let i = 0; i < basePoints.length; i++) {
@@ -824,6 +859,130 @@ function checkProposedMove(newTheta, newRobotX) {
   }
 
   return false; 
+}
+
+// Check if ball collides with any part of the robot
+function checkBallRobotCollision() {
+  if (isBallHeld) return { collided: false };
+  
+  var m = mat4();
+  m = mult(m, rotateX(viewRotationX));
+  m = mult(m, rotateY(viewRotationY));
+  m = mult(m, translate(robotPosX, -5.0, 0.0));
+  m = mult(m, rotateY(theta[BASE_BODY]));
+  
+  // check base collision
+  var baseCenterX = m[0][3];
+  var baseCenterZ = m[2][3];
+
+  var dx = ballCurrentPos[0] - baseCenterX;
+  var dz = ballCurrentPos[2] - baseCenterZ;
+  var distXZ = Math.sqrt(dx*dx + dz*dz);
+
+  // Only check if ball is at base height (Y check)
+  var baseCenterY = m[1][3] + 1.0;
+  var ballIsAtBaseHeight = (ballCurrentPos[1] < (baseCenterY + 1.5)) && 
+                          (ballCurrentPos[1] > (baseCenterY - 1.5));
+
+  // Use 2.6 for tighter fit
+  if (ballIsAtBaseHeight && distXZ < (2.6 + ballRadius)) {
+    // Check collision cooldown (prevent repeated collisions)
+    var currentTime = Date.now();
+    if (currentTime - lastRobotCollisionTime > 200) { // 200ms cooldown
+      var len = Math.max(distXZ, 0.001);
+      var dy = ballCurrentPos[1] - baseCenterY;
+      var lenFull = Math.sqrt(dx*dx + dy*dy + dz*dz);
+      lenFull = Math.max(lenFull, 0.001);
+      
+      lastRobotCollisionTime = currentTime; // Set cooldown timer
+      
+      return { 
+        collided: true, 
+        normal: [dx/lenFull, dy/lenFull, dz/lenFull]
+      };
+    }
+  }
+  
+  // ===== 2. CHECK UPPER ARM =====
+  m = mult(m, translate(0.0, BASE_HEIGHT, 0.0));
+  var pShoulder = [m[0][3], m[1][3], m[2][3]];
+  
+  var m_upper = mult(m, rotateZ(theta[UPPER_ARM]));
+  var m_elbow = mult(m_upper, translate(0.0, UARM_HEIGHT, 0.0));
+  var pElbow = [m_elbow[0][3], m_elbow[1][3], m_elbow[2][3]];
+  
+  var upperArmCheck = checkBallCylinderCollision(pShoulder, pElbow, 0.25);
+  if (upperArmCheck.collided) return upperArmCheck;
+  
+  // ===== 3. CHECK LOWER ARM =====
+  var m_lower = mult(m_elbow, rotateZ(theta[LOWER_ARM]));
+  var m_wrist = mult(m_lower, translate(0.0, LARM_HEIGHT, 0.0));
+  var pWrist = [m_wrist[0][3], m_wrist[1][3], m_wrist[2][3]];
+  
+  var lowerArmCheck = checkBallCylinderCollision(pElbow, pWrist, 0.25);
+  if (lowerArmCheck.collided) return lowerArmCheck;
+  
+  // ===== 4. CHECK WRIST SPHERE =====
+  dx = ballCurrentPos[0] - pWrist[0];
+  dy = ballCurrentPos[1] - pWrist[1];
+  dz = ballCurrentPos[2] - pWrist[2];
+  var distToWrist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  
+  if (distToWrist < (ballRadius + WRIST_SPHERE_RADIUS)) {
+    var len = Math.max(distToWrist, 0.001);
+    return { 
+      collided: true, 
+      normal: [dx/len, dy/len, dz/len]
+    };
+  }
+  
+  return { collided: false };
+}
+
+// Helper: Check ball collision with cylindrical arm segment
+function checkBallCylinderCollision(pStart, pEnd, armRadius) {
+  // Vector from start to end
+  var armX = pEnd[0] - pStart[0];
+  var armY = pEnd[1] - pStart[1];
+  var armZ = pEnd[2] - pStart[2];
+  var armLength = Math.sqrt(armX*armX + armY*armY + armZ*armZ);
+  
+  if (armLength < 0.001) return { collided: false };
+  
+  // Normalize arm direction
+  var armDirX = armX / armLength;
+  var armDirY = armY / armLength;
+  var armDirZ = armZ / armLength;
+  
+  // Vector from start to ball
+  var toBallX = ballCurrentPos[0] - pStart[0];
+  var toBallY = ballCurrentPos[1] - pStart[1];
+  var toBallZ = ballCurrentPos[2] - pStart[2];
+  
+  // Project ball onto arm line
+  var projection = toBallX*armDirX + toBallY*armDirY + toBallZ*armDirZ;
+  projection = Math.max(0, Math.min(armLength, projection));
+  
+  // Closest point on arm
+  var closestX = pStart[0] + armDirX * projection;
+  var closestY = pStart[1] + armDirY * projection;
+  var closestZ = pStart[2] + armDirZ * projection;
+  
+  // Distance from ball to arm
+  var dx = ballCurrentPos[0] - closestX;
+  var dy = ballCurrentPos[1] - closestY;
+  var dz = ballCurrentPos[2] - closestZ;
+  var dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  
+  if (dist < (ballRadius + armRadius)) {
+    var len = Math.max(dist, 0.001);
+    return { 
+      collided: true, 
+      normal: [dx/len, dy/len, dz/len]
+    };
+  }
+  
+  return { collided: false };
 }
 
 // Update component color palette
@@ -1045,13 +1204,24 @@ function getUIElement() {
     theta[OUTER_UPPER_GRIPPER] = parseFloat(event.target.value);
     theta[OUTER_BOTTOM_GRIPPER] = -parseFloat(event.target.value);
     
-    // Check for environment collision (Ground/Basket) using new Enhanced Logic
+    // Force a draw to update wristMatrix for collision check
+    draw();
+    
+    // Check for self-collision (outer grippers touching each other)
+    if (checkOuterGripperCollision()) {
+      theta[OUTER_UPPER_GRIPPER] = oldOuterTheta;
+      theta[OUTER_BOTTOM_GRIPPER] = oldOuterBottomTheta;
+      outerGripSlider.value = oldOuterTheta;
+      outerGripText.innerText = oldOuterTheta;
+      return;
+    }
+    
+    // Check for environment collision (Ground/Basket) using Enhanced Logic
     if (checkProposedMove(theta, robotPosX)) {
       theta[OUTER_UPPER_GRIPPER] = oldOuterTheta;
       theta[OUTER_BOTTOM_GRIPPER] = oldOuterBottomTheta;
       outerGripSlider.value = oldOuterTheta;
       outerGripText.innerText = oldOuterTheta;
-      console.log("Cannot move gripper: Collision detected");
       return;
     }
     
@@ -1954,6 +2124,34 @@ function releaseBall() {
   ballCurrentPos[0] += ballVelocity.x;
   ballCurrentPos[2] += ballVelocity.z || 0;
 
+  // ===== ROBOT COLLISION HANDLING =====
+  var robotCollision = checkBallRobotCollision();
+  if (robotCollision.collided) {
+    
+    // Calculate dot product for reflection
+    var dotProduct = ballVelocity.x * robotCollision.normal[0] + 
+                    ballVelocity.y * robotCollision.normal[1] + 
+                    (ballVelocity.z || 0) * robotCollision.normal[2];
+    
+    // Only bounce if moving TOWARDS the surface (dot product is negative)
+    if (dotProduct < 0) {
+      // Reflect velocity
+      ballVelocity.x = (ballVelocity.x - 2 * dotProduct * robotCollision.normal[0]) * 0.7;
+      ballVelocity.y = (ballVelocity.y - 2 * dotProduct * robotCollision.normal[1]) * 0.7;
+      ballVelocity.z = ((ballVelocity.z || 0) - 2 * dotProduct * robotCollision.normal[2]) * 0.7;
+      
+      // Push ball away more forcefully to prevent re-collision
+      ballCurrentPos[0] += robotCollision.normal[0] * 0.3; // Increased from 0.15
+      ballCurrentPos[1] += robotCollision.normal[1] * 0.3;
+      ballCurrentPos[2] += robotCollision.normal[2] * 0.3;
+      
+      // Add a small outward "escape velocity" to ensure it keeps moving away
+      var escapeSpeed = 0.02;
+      ballVelocity.x += robotCollision.normal[0] * escapeSpeed;
+      ballVelocity.z += robotCollision.normal[2] * escapeSpeed;
+    }
+  }
+
   // Basket dimensions
   const basketTop = BASKET_Y;
   const basketBottom = BASKET_Y - BASKET_HEIGHT / 2;
@@ -2257,6 +2455,46 @@ function checkGripCenterCollision() {
   return dist < captureRadius && theta[INNER_UPPER_GRIPPER] > 60 && theta[OUTER_UPPER_GRIPPER] > -35;
 }
 
+// Check if outer grippers are colliding with each other
+function checkOuterGripperCollision() {
+  // Calculate the tip positions of both outer grippers
+  var m_wristRotated = mult(wristMatrix, rotateY(theta[WRIST_Z]));
+  
+  // Bottom Outer Gripper Tip Position
+  var m_bottom = mult(m_wristRotated, translate(0.1, 0.0, 0.0));
+  m_bottom = mult(m_bottom, rotateZ(theta[INNER_BOTTOM_GRIPPER]));
+  m_bottom = mult(m_bottom, translate(0.0, INNERBOTTOM_GRIP_HEIGHT, 0.0));
+  m_bottom = mult(m_bottom, rotateZ(theta[OUTER_BOTTOM_GRIPPER]));
+  m_bottom = mult(m_bottom, translate(0.0, OUTERBOTTOM_GRIP_HEIGHT, 0.0));
+  
+  var bottomTipX = m_bottom[0][3];
+  var bottomTipY = m_bottom[1][3];
+  var bottomTipZ = m_bottom[2][3];
+  
+  // Upper Outer Gripper Tip Position
+  var m_upper = mult(m_wristRotated, translate(-0.1, 0.0, 0.0));
+  m_upper = mult(m_upper, rotateZ(theta[INNER_UPPER_GRIPPER]));
+  m_upper = mult(m_upper, translate(0.0, INNERUPPER_GRIP_HEIGHT, 0.0));
+  m_upper = mult(m_upper, rotateZ(theta[OUTER_UPPER_GRIPPER]));
+  m_upper = mult(m_upper, translate(0.0, OUTERUPPER_GRIP_HEIGHT, 0.0));
+  
+  var upperTipX = m_upper[0][3];
+  var upperTipY = m_upper[1][3];
+  var upperTipZ = m_upper[2][3];
+  
+  // Calculate distance between tips
+  var dx = bottomTipX - upperTipX;
+  var dy = bottomTipY - upperTipY;
+  var dz = bottomTipZ - upperTipZ;
+  var distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  
+  // Gripper width is 0.3, so minimum safe distance is 0.3 (touching)
+  // We add a small buffer of 0.1 for safety
+  var minSafeDistance = 0.4;
+  
+  return distance < minSafeDistance;
+}
+
 // Check if robot arm touches ball (when not held)
 function checkArmBallCollision() {
   if (isBallHeld || isFalling || ballIsRolling) return false;
@@ -2379,6 +2617,7 @@ function restartGame() {
   
   // 1. Reset Robot Angles (theta) and animation state
   theta = [0, 0, 0, 30, -38, -30, 38, 0];
+  lastRobotCollisionTime = 0; // Reset collision cooldown
 
   animationPhase = ST_IDLE;
   isAnimationRunning = false;
