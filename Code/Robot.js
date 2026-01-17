@@ -1869,11 +1869,6 @@ function draw() {
   if (isFalling || isAnimationRunning || ballIsRolling) {
     window.requestAnimationFrame(draw);
   }
-
-  // Check for Game Over Type 1 (ball off stage) only when appropriate
-  if (!isBallHeld && !isFalling) {
-    checkGameOver();
-  }
 }
 
 // Draw the basket container in the scene
@@ -2317,11 +2312,6 @@ function releaseBall() {
   BallPosX = ballCurrentPos[0];
   BallPosY = ballCurrentPos[1];
   BallPosZ = ballCurrentPos[2]; // ← Make sure Z is also synced
-
-  // Check game over (but only after ball has fully settled)
-  if (!isFalling && !isBallHeld) {
-    checkGameOver();
-  }
 }
 
 // Handle ball rolling on stage when touched by arm
@@ -2650,7 +2640,7 @@ function restartGame() {
   updateScoreDisplay();
   GripControl(innerGripSlider, outerGripSlider);
 
-  // 6. Force a brief delay before allowing checkGameOver to run again
+  // 6. Force a brief delay
   // Prevents the modal from re-triggering immediately
   setTimeout(() => {
     isGameActive = true; // Confirm it's active after everything is reset
@@ -2744,44 +2734,6 @@ function isBallOnStage() {
     ballCurrentPos[1] <= (ballStageY + 2.0);
 
   return ballCurrentPos[1] >= ballStageY && distFromCenter <= safeZoneRadius;
-}
-
-// Check for game over conditions
-function checkGameOver() {
-  // Skip game over checks during demo
-  if (isDemoRunning) return;
-
-  // Skip if ball is currently falling - let physics finish!
-  if (isFalling) return;
-
-  // Skip if ball was intentionally released
-  if (ballWasReleased) return;
-
-  const basketLeft = BASKET_X - BASKET_SIZE / 2;
-  const basketRight = BASKET_X + BASKET_SIZE / 2;
-  const basketFront = BASKET_Z + BASKET_SIZE / 2;
-  const basketBack = BASKET_Z - BASKET_SIZE / 2;
-
-  // Check if ball is inside basket area
-  const isInBasket = ballCurrentPos[0] > basketLeft &&
-    ballCurrentPos[0] < basketRight &&
-    ballCurrentPos[2] > basketBack &&
-    ballCurrentPos[2] < basketFront;
-
-  // GAME OVER TYPE 1: Ball pushed/rolled off the stage
-  if (!isBallHeld && !isBallOnStage() && !isInBasket) {
-    if (isGameActive) {
-      isGameActive = false;
-      ballIsRolling = false;
-      ballVelocity = { x: 0, y: 0, z: 0 };
-
-      // Disable controls
-      disableAllButton();
-
-      // Trigger game over modal
-      showGameOver("REASON:\nThe ball fell off the stage!");
-    }
-  }
 }
 
 // ======= DEMO ANIMATION SEQUENCE =======
