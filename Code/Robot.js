@@ -2730,9 +2730,6 @@ function isBallOnStage() {
   // If the ball gets too close to the edge, we say it's "off" and gravity takes over.
   var safeZoneRadius = ballStageRadius - 0.5;
 
-  var isAtStageHeight = ballCurrentPos[1] >= (ballStageY - 0.2) &&
-    ballCurrentPos[1] <= (ballStageY + 2.0);
-
   return ballCurrentPos[1] >= ballStageY && distFromCenter <= safeZoneRadius;
 }
 
