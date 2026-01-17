@@ -617,7 +617,7 @@ function handleKeyDown(event) {
   }
 
   // Check if arm touches ball after movement
-  if (needsUpdate && !isBallHeld && checkArmBallCollision()) {
+  if (needsUpdate && !isBallHeld && checkGripperBallCollision()) {
     triggerBallRolling();
   }
 
@@ -1078,7 +1078,7 @@ function getUIElement() {
     textElement.innerHTML = safeVal.toFixed(1);
 
     // Check ball touch logic (keep your existing logic)
-    if (!isBallHeld && checkArmBallCollision()) {
+    if (!isBallHeld && checkGripperBallCollision()) {
       triggerBallRolling();
     }
 
@@ -1134,7 +1134,7 @@ function getUIElement() {
     textElement.innerHTML = safeVal.toFixed(1);
 
     // Check if we are pushing the ball
-    if (!isBallHeld && checkArmBallCollision()) {
+    if (!isBallHeld && checkGripperBallCollision()) {
       triggerBallRolling();
     }
 
@@ -1193,7 +1193,7 @@ function getUIElement() {
     }
 
     // Check if arm touches ball
-    if (!isBallHeld && checkArmBallCollision()) {
+    if (!isBallHeld && checkGripperBallCollision()) {
       triggerBallRolling();
     }
 
@@ -1231,7 +1231,7 @@ function getUIElement() {
     }
 
     // Check if arm touches ball
-    if (!isBallHeld && checkArmBallCollision()) {
+    if (!isBallHeld && checkGripperBallCollision()) {
       triggerBallRolling();
     }
 
@@ -2486,7 +2486,7 @@ function checkOuterGripperCollision() {
 }
 
 // Check if robot arm touches ball (when not held)
-function checkArmBallCollision() {
+function checkGripperBallCollision() {
   if (isBallHeld || isFalling || ballIsRolling) return false;
 
   var gripCenterMatrix = mult(wristMatrix, translate(0.0, CLAW_CENTER * 0.5, 0.0));
