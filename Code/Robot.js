@@ -3083,8 +3083,18 @@ function updateSlider(sliderId, value, textId) {
 // Stop demo
 function stopDemo() {
   isDemoRunning = false;
+  pauseDemo = false;
   demoAnimationPhase = DEMO_ST_IDLE;
 
+  var pauseDemoBtn = document.getElementById("pause-demo-btn");
+  
+  if (pauseDemoBtn) {
+      pauseDemoBtn.innerHTML = "Pause Demo";
+      pauseDemoBtn.style.backgroundImage = ""; 
+      pauseDemoBtn.style.backgroundColor = ""; 
+      pauseDemoBtn.style.color = ""; 
+  }
+  
   // Swap buttons back
   document.getElementById("demo-controls").style.display = "none";
   document.getElementById("game-controls").style.display = "block";
