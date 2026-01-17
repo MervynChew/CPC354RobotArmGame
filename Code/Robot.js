@@ -2322,13 +2322,6 @@ function updateBallRolling() {
   ballCurrentPos[0] += ballVelocity.x; // Rolling update X
   ballCurrentPos[2] += ballVelocity.z; // Rolling update Z
 
-  var distFromCenter = Math.sqrt(
-    (ballCurrentPos[0] - ballStageX) ** 2 +
-    (ballCurrentPos[2] - ballStageZ) ** 2
-  );
-
-
-
   // 2. Apply Friction (Slow down both X and Z)
   ballVelocity.x *= FRICTION;
   ballVelocity.z *= FRICTION;
