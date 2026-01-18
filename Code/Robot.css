@@ -1,15 +1,15 @@
-/* Import fonts */
+/* import fonts */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
 
 
-/* Reset and base styles */
+/* reset and base styles */
 * {
   margin: 0;
   padding: 0;
-  box-sizing: border-box; /* Ensures padding/border don't affect element size */
+  box-sizing: border-box; 
 }
 
-
+/* gradient background */
 body {
   width: 100vw;
   height: 100vh;
@@ -21,7 +21,7 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1729 100%); /* Futuristic dark space gradient */
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1729 100%); 
   font-family: 'Rajdhani', sans-serif;
 }
 
@@ -45,9 +45,9 @@ body {
 }
 
 
-/* Score panel at the top */
+/* score panel at the top that show game status */
 .score-panel {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));   /* Semi-transparent dark bg */
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));  
   border: 2px solid rgba(59, 130, 246, 0.3);
   border-radius: 12px;
   padding: 12px;
@@ -58,7 +58,7 @@ body {
   gap: 10px;
 }
 
-/* Individual stat container (e.g., Score, Lives) */
+/* individual status boxes like best score and win streak */ 
 .stat-box {
   text-align: center;
   padding: 10px;
@@ -67,7 +67,7 @@ body {
   border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
-
+/* value that display in the status boxes */
 .stat-label {
   font-size: 12px;
   font-weight: 600;
@@ -105,7 +105,7 @@ body {
 }
 
 
-/* Text display for game current status */
+/* text display for game current status */
 .game-status {
   grid-column: 1 / -1;
   text-align: center;
@@ -136,8 +136,6 @@ body {
   background: linear-gradient(135deg, #f8fafc, #e2e8f0);
 }
 
-
-/* Layout helpers */
 .horizontal-align
 {
   display: flex;
@@ -155,8 +153,7 @@ body {
   justify-content: center;
 }
 
-
-/* Control panel */
+/* right side control panel container */
 .panel
 {
   width: 360px;
@@ -171,7 +168,7 @@ body {
   gap: 8px;
 }
 
-
+/* title text for control panel */
 .panel-title {
   font-family: 'Orbitron', sans-serif;
   font-size: 16px;
@@ -195,13 +192,12 @@ body {
 }
 
 
-/* Group for each control element */
 .control-group {
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(59, 130, 246, 0.2);
   border-radius: 8px;
   padding: 8px;
-  transition: border-color 0.2s ease; /* Smooth glow when hovering */
+  transition: border-color 0.2s ease; 
 }
 
 
@@ -227,14 +223,7 @@ body {
 }
 
 
-.mg-top-bottom
-{
-  margin-top: 10px;
-  margin-bottom: 10px;
-}
-
-
-/* Slider styling */
+/* slider styling */
 .slider
 {
   font-weight: bold;
@@ -341,25 +330,6 @@ input[type="range"]:disabled::-moz-range-thumb {
   cursor: not-allowed;
 }
 
-
-.checkText
-{
-  width: 150px;
-  height: 20px;
-  font-weight: bold;
-  font-size: large;
-  color: #ffffff;
-}
-
-
-.checkRadio
-{
-  width: 20px;
-  height: 20px;
-  margin-right: 22px;
-}
-
-
 /* Value display box */
 .textbox
 {
@@ -371,17 +341,6 @@ input[type="range"]:disabled::-moz-range-thumb {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-
-.textbox2
-{
-  margin-left: 15px;
-  width: 55px;
-  height: 40px;
-  background: #0077b6;
-  border: 5px solid #00b4d8;
-  border-radius: 10px;
 }
 
 
@@ -397,17 +356,7 @@ input[type="range"]:disabled::-moz-range-thumb {
   margin: 0;
 }
 
-
-.textbox2 p
-{
-  position: relative;
-  color: #ffffff;
-  text-align: center;
-  font-weight: bold;
-  font-size: 20px;
-  line-height: 0.1;
-}
-
+/* styling for all buttons */
 button {
   font-family: 'Orbitron', sans-serif;
   padding: 12px 20px;
@@ -418,11 +367,12 @@ button {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s ease; /* Feedback for hover and active states */
+  transition: all 0.2s ease; 
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   margin-top: 3px;
 }
 
+/* container for button groups */
 .button-group {
   display: flex;
   flex-direction: column;
@@ -433,7 +383,7 @@ button {
   width: 100%;
 }
 
-/* Grab or drop cubes/objects */
+/* design for grab button */
 #grab-button {
   background: linear-gradient(135deg, #10b981, #059669);
   color: white;
@@ -453,7 +403,7 @@ button {
 }
 
 
-/* Reset the game board and robot position */
+/* design for restart button */
 #restart-button {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   color: white;
@@ -473,7 +423,7 @@ button {
 }
 
 
-/* Switch to autonomous demo mode */
+/* design for demo button */
 #demo-button {
   background: linear-gradient(135deg, #8b5cf6, #7c3aed);
   color: white;
@@ -492,21 +442,19 @@ button {
   box-shadow: 0 1px 4px rgba(139, 92, 246, 0.4);
 }
 
-/* Demo Control Buttons */
+/* design for pause demo button */
 #pause-demo-btn {
-  /* Gradient: Soft orange to deep orange */
   background: linear-gradient(135deg, #ffb347, #ffa500);
   color: white;
-  /* Border: Transparent orange glow */
   border: 2px solid rgba(255, 165, 0, 0.5);
 }
 
 #pause-demo-btn:hover {
   transform: translateY(-1px);
-  /* Matching orange shadow glow */
   box-shadow: 0 4px 12px rgba(255, 165, 0, 0.4);
 }
 
+/* design for restart demo button */
 #restart-demo-btn {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
@@ -518,6 +466,7 @@ button {
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
+/* design for quit demo button */
 #quit-demo-btn {
   background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white;
@@ -567,7 +516,7 @@ button:disabled::before {
   color: #64748b;
 }
 
-/* Keyboard Legend Panel */
+/* keyboard control legend */
 .keyboard-legend {
   width: 280px;
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
@@ -577,7 +526,7 @@ button:disabled::before {
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   display: flex;
-  flex-direction: column; /* Arranges items vertically */
+  flex-direction: column; 
   gap: 10px;
 }
 
@@ -629,7 +578,6 @@ button:disabled::before {
   min-width: 70px;
 }
 
-/* Visual representation of a physical keyboard keycap */
 .key {
   display: inline-flex;
   align-items: center;
@@ -647,7 +595,6 @@ button:disabled::before {
   text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  /* Subtle top highlights for depth */
   transition: all 0.2s ease;
 }
 
@@ -672,9 +619,7 @@ button:disabled::before {
   line-height: 1.3;
 }
 
-/* --- Custom Modal Styles --- */
-
-/* The background overlay */
+/* background overlay for modals */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -682,23 +627,22 @@ button:disabled::before {
   width: 100%;
   height: 100%;
   background: rgba(10, 14, 39, 0.85);
-  backdrop-filter: blur(8px); /* Blur behind the dialog */
+  backdrop-filter: blur(8px); /* blur behind the dialog */
   z-index: 1000; /* Ensures overlay is on top of everything */
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  pointer-events: none; /* Click-through when hidden */
+  pointer-events: none;
   transition: opacity 0.3s ease;
 }
 
-/* State to show the modal */
+/* state to show the modal */
 .modal-overlay.active {
   opacity: 1;
   pointer-events: all;
 }
 
-/* The Modal Box */
 .modal-box {
   width: 400px;
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98));
@@ -717,7 +661,6 @@ button:disabled::before {
   transform: scale(1);
 }
 
-/* Title */
 .modal-title {
   font-family: 'Orbitron', sans-serif;
   font-size: 20px;
@@ -732,7 +675,6 @@ button:disabled::before {
   margin-bottom: 8px;
 }
 
-/* Message Body */
 .modal-body p {
   font-family: 'Rajdhani', sans-serif;
   font-size: 18px;
@@ -742,14 +684,12 @@ button:disabled::before {
   line-height: 1.5;
 }
 
-/* Buttons Container */
 .modal-actions {
   display: flex;
   gap: 12px;
   margin-top: 10px;
 }
 
-/* Common Modal Button Styles */
 .modal-btn {
   flex: 1;
   padding: 14px;
@@ -763,7 +703,7 @@ button:disabled::before {
   text-transform: uppercase;
 }
 
-/* Cancel Button - Grey/Muted */
+/* design for cancel button in modal */
 .modal-btn.cancel {
   background: transparent;
   border: 2px solid rgba(148, 163, 184, 0.4);
@@ -776,7 +716,7 @@ button:disabled::before {
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* Confirm Button - Danger/Warning Theme */
+/* design for confirm button in modal */
 .modal-btn.confirm {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   border: 2px solid rgba(245, 158, 11, 0.5);
@@ -789,14 +729,12 @@ button:disabled::before {
   box-shadow: 0 6px 16px rgba(245, 158, 11, 0.5);
 }
 
-/* --- Game Over Specific Styles --- */
 
-/* Center the button for Game Over */
+/* game over modal */
 .modal-actions.center {
   justify-content: center;
 }
 
-/* Red Title for Errors */
 .modal-title.error {
   background: linear-gradient(135deg, #ef4444, #b91c1c);
   -webkit-background-clip: text;
@@ -805,19 +743,17 @@ button:disabled::before {
   text-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
 }
 
-/* Red Glow for the Box */
 .modal-box.game-over {
   border-color: rgba(239, 68, 68, 0.5);
   box-shadow: 0 0 30px rgba(239, 68, 68, 0.15), 0 10px 40px rgba(0, 0, 0, 0.8);
 }
 
-/* Danger Button Style */
 .modal-btn.danger {
   background: linear-gradient(135deg, #ef4444, #b91c1c);
   border: 2px solid rgba(239, 68, 68, 0.5);
   color: white;
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-  max-width: 200px; /* Prevent it from being too wide */
+  max-width: 200px; 
 }
 
 .modal-btn.danger:hover {

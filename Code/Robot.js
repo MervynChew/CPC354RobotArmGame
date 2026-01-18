@@ -295,9 +295,9 @@ function mousemove(event) {
   }
 }
 
-// Keyboard control handler
+// keyboard control handler
 function handleKeyDown(event) {
-  // Prevent default for spacebar to avoid page scroll
+  // prevent default for spacebar to avoid page scroll
   if (event.code === 'Space') {
     event.preventDefault();
   }
@@ -314,12 +314,12 @@ function handleKeyDown(event) {
 
   switch (key) {
     case 'a':
-      if (robotPosX > -10) { // Check min limit
+      if (robotPosX > -10) { // check min limit
         robotPosX -= robotStepSize;
-        robotPosX = Math.max(-10, robotPosX); // Clamp to min
+        robotPosX = Math.max(-10, robotPosX); // force the value to stay within range
         if (checkProposedMove(theta, robotPosX)) {
-          robotPosX += robotStepSize; // Revert if collision
-          robotPosX = Math.max(-10, robotPosX); // Clamp again
+          robotPosX += robotStepSize; // revert if collision
+          robotPosX = Math.max(-10, robotPosX); 
         } else {
           sliderElement = document.getElementById("robot-x");
           textElement = document.getElementById("robot-x-text");
@@ -332,12 +332,12 @@ function handleKeyDown(event) {
 
     // MOVE ROBOT RIGHT: D Key
     case 'd':
-      if (robotPosX < 10) { // Check max limit
+      if (robotPosX < 10) { // check max limit
         robotPosX += robotStepSize;
-        robotPosX = Math.min(10, robotPosX); // Clamp to max
+        robotPosX = Math.min(10, robotPosX); // force the value to stay within range
         if (checkProposedMove(theta, robotPosX)) {
-          robotPosX -= robotStepSize; // Revert if collision
-          robotPosX = Math.min(10, robotPosX); // Clamp again
+          robotPosX -= robotStepSize; // revert if collision
+          robotPosX = Math.min(10, robotPosX); 
         } else {
           sliderElement = document.getElementById("robot-x");
           textElement = document.getElementById("robot-x-text");
@@ -351,9 +351,9 @@ function handleKeyDown(event) {
     // Base Angle: Q (decrease), E (increase)
     // Range: 0 to 360
     case 'q':
-      if (theta[BASE_BODY] > 0) { // Check min limit
+      if (theta[BASE_BODY] > 0) { // check min limit
         theta[BASE_BODY] -= stepSize;
-        theta[BASE_BODY] = Math.max(0, theta[BASE_BODY]); // Clamp to min
+        theta[BASE_BODY] = Math.max(0, theta[BASE_BODY]); //force the value to stay within range
         if (checkProposedMove(theta, robotPosX)) {
           theta[BASE_BODY] += stepSize;
           theta[BASE_BODY] = Math.max(0, theta[BASE_BODY]);
@@ -371,7 +371,7 @@ function handleKeyDown(event) {
     case 'e':
       if (theta[BASE_BODY] < 360) { // Check max limit
         theta[BASE_BODY] += stepSize;
-        theta[BASE_BODY] = Math.min(360, theta[BASE_BODY]); // Clamp to max
+        theta[BASE_BODY] = Math.min(360, theta[BASE_BODY]); //force the value to stay within range
         if (checkProposedMove(theta, robotPosX)) {
           theta[BASE_BODY] -= stepSize;
           theta[BASE_BODY] = Math.min(360, theta[BASE_BODY]);
@@ -389,7 +389,7 @@ function handleKeyDown(event) {
     case 'w':
       if (theta[UPPER_ARM] > -90) { // Check min limit
         theta[UPPER_ARM] -= stepSize;
-        theta[UPPER_ARM] = Math.max(-90, theta[UPPER_ARM]); // Clamp to min
+        theta[UPPER_ARM] = Math.max(-90, theta[UPPER_ARM]); //force the value to stay within range
         if (checkProposedMove(theta, robotPosX)) {
           theta[UPPER_ARM] += stepSize;
           theta[UPPER_ARM] = Math.max(-90, theta[UPPER_ARM]);
@@ -407,7 +407,7 @@ function handleKeyDown(event) {
     case 's':
       if (theta[UPPER_ARM] < 90) { // Check max limit
         theta[UPPER_ARM] += stepSize;
-        theta[UPPER_ARM] = Math.min(90, theta[UPPER_ARM]); // Clamp to max
+        theta[UPPER_ARM] = Math.min(90, theta[UPPER_ARM]); //force the value to stay within range
         if (checkProposedMove(theta, robotPosX)) {
           theta[UPPER_ARM] -= stepSize;
           theta[UPPER_ARM] = Math.min(90, theta[UPPER_ARM]);
@@ -426,7 +426,7 @@ function handleKeyDown(event) {
     case 'r':
       if (theta[LOWER_ARM] > -90) { // Check min limit
         theta[LOWER_ARM] -= stepSize;
-        theta[LOWER_ARM] = Math.max(-90, theta[LOWER_ARM]); // Clamp to min
+        theta[LOWER_ARM] = Math.max(-90, theta[LOWER_ARM]); //force the value to stay within range
         if (checkProposedMove(theta, robotPosX)) {
           theta[LOWER_ARM] += stepSize;
           theta[LOWER_ARM] = Math.max(-90, theta[LOWER_ARM]);
@@ -444,7 +444,7 @@ function handleKeyDown(event) {
     case 'f':
       if (theta[LOWER_ARM] < 90) { // Check max limit
         theta[LOWER_ARM] += stepSize;
-        theta[LOWER_ARM] = Math.min(90, theta[LOWER_ARM]); // Clamp to max
+        theta[LOWER_ARM] = Math.min(90, theta[LOWER_ARM]); //force the value to stay within range
         if (checkProposedMove(theta, robotPosX)) {
           theta[LOWER_ARM] -= stepSize;
           theta[LOWER_ARM] = Math.min(90, theta[LOWER_ARM]);
@@ -466,7 +466,7 @@ function handleKeyDown(event) {
         let oldInnerBottomTheta = theta[INNER_BOTTOM_GRIPPER];
 
         theta[INNER_UPPER_GRIPPER] -= stepSize;
-        theta[INNER_UPPER_GRIPPER] = Math.max(20, theta[INNER_UPPER_GRIPPER]); // Clamp to min
+        theta[INNER_UPPER_GRIPPER] = Math.max(20, theta[INNER_UPPER_GRIPPER]); //force the value to stay within range
         theta[INNER_BOTTOM_GRIPPER] = -theta[INNER_UPPER_GRIPPER];
 
         if (checkGripCenterCollision() || checkProposedMove(theta, robotPosX)) {
@@ -488,7 +488,7 @@ function handleKeyDown(event) {
         let oldInnerBottomTheta = theta[INNER_BOTTOM_GRIPPER];
 
         theta[INNER_UPPER_GRIPPER] += stepSize;
-        theta[INNER_UPPER_GRIPPER] = Math.min(90, theta[INNER_UPPER_GRIPPER]); // Clamp to max
+        theta[INNER_UPPER_GRIPPER] = Math.min(90, theta[INNER_UPPER_GRIPPER]); //force the value to stay within range
         theta[INNER_BOTTOM_GRIPPER] = -theta[INNER_UPPER_GRIPPER];
 
         if (checkGripCenterCollision() || checkProposedMove(theta, robotPosX)) {
@@ -512,7 +512,7 @@ function handleKeyDown(event) {
         let oldOuterBottomTheta = theta[OUTER_BOTTOM_GRIPPER];
 
         theta[OUTER_UPPER_GRIPPER] -= stepSize;
-        theta[OUTER_UPPER_GRIPPER] = Math.max(-90, theta[OUTER_UPPER_GRIPPER]); // Clamp to min
+        theta[OUTER_UPPER_GRIPPER] = Math.max(-90, theta[OUTER_UPPER_GRIPPER]); //force the value to stay within range
         theta[OUTER_BOTTOM_GRIPPER] = -theta[OUTER_UPPER_GRIPPER];
 
         // Force draw to update matrices
@@ -522,7 +522,6 @@ function handleKeyDown(event) {
         if (checkOuterGripperCollision()) {
           theta[OUTER_UPPER_GRIPPER] = oldOuterTheta;
           theta[OUTER_BOTTOM_GRIPPER] = oldOuterBottomTheta;
-          console.log("Outer grippers would collide!");
         } else if (checkProposedMove(theta, robotPosX)) {
           theta[OUTER_UPPER_GRIPPER] = oldOuterTheta;
           theta[OUTER_BOTTOM_GRIPPER] = oldOuterBottomTheta;
@@ -542,7 +541,7 @@ function handleKeyDown(event) {
         let oldOuterBottomTheta = theta[OUTER_BOTTOM_GRIPPER];
 
         theta[OUTER_UPPER_GRIPPER] += stepSize;
-        theta[OUTER_UPPER_GRIPPER] = Math.min(0, theta[OUTER_UPPER_GRIPPER]); // Clamp to max
+        theta[OUTER_UPPER_GRIPPER] = Math.min(0, theta[OUTER_UPPER_GRIPPER]); //force the value to stay within range
         theta[OUTER_BOTTOM_GRIPPER] = -theta[OUTER_UPPER_GRIPPER];
 
         // Force draw to update matrices
@@ -571,7 +570,7 @@ function handleKeyDown(event) {
     case 'z':
       if (theta[WRIST_Z] > -180) { // Check min limit
         theta[WRIST_Z] -= stepSize;
-        theta[WRIST_Z] = Math.max(-180, theta[WRIST_Z]); // Clamp to min
+        theta[WRIST_Z] = Math.max(-180, theta[WRIST_Z]); //force the value to stay within range
         if (checkProposedMove(theta, robotPosX)) {
           theta[WRIST_Z] += stepSize;
           theta[WRIST_Z] = Math.max(-180, theta[WRIST_Z]);
@@ -588,7 +587,7 @@ function handleKeyDown(event) {
     case 'x':
       if (theta[WRIST_Z] < 180) { // Check max limit
         theta[WRIST_Z] += stepSize;
-        theta[WRIST_Z] = Math.min(180, theta[WRIST_Z]); // Clamp to max
+        theta[WRIST_Z] = Math.min(180, theta[WRIST_Z]); //force the value to stay within range
         if (checkProposedMove(theta, robotPosX)) {
           theta[WRIST_Z] -= stepSize;
           theta[WRIST_Z] = Math.min(180, theta[WRIST_Z]);
@@ -602,21 +601,21 @@ function handleKeyDown(event) {
       }
       break;
 
-    // Spacebar: Grab/Release Ball
+    // spacebar: Grab/Release Ball
     case ' ':
       const grabButton = document.getElementById("grab-button");
       if (grabButton && !grabButton.disabled) {
         if (!isBallHeld) {
-          gripBall(); // Attempt to pick up the ball
+          gripBall(); // Try to pick up the ball
         } else {
-          letGoGrip(); // Release the ball with falling physics
+          letGoGrip(); // Release the ball
         }
         needsUpdate = true;
       }
       break;
   }
 
-  // Check if arm touches ball after movement
+  // check if gripper touches ball after movement
   if (needsUpdate && !isBallHeld && checkGripperBallCollision()) {
     triggerBallRolling();
   }
@@ -888,17 +887,16 @@ function checkBallRobotCollision() {
   var ballIsAtBaseHeight = (ballCurrentPos[1] < (baseCenterY + 1.5)) &&
     (ballCurrentPos[1] > (baseCenterY - 1.5));
 
-  // Use 2.6 for tighter fit
   if (ballIsAtBaseHeight && distXZ < (2.6 + ballRadius)) {
-    // Check collision cooldown (prevent repeated collisions)
+    // Check collision cooldown to prevent repeated collisions
     var currentTime = Date.now();
-    if (currentTime - lastRobotCollisionTime > 200) { // 200ms cooldown
+    if (currentTime - lastRobotCollisionTime > 200) { 
       var len = Math.max(distXZ, 0.001);
       var dy = ballCurrentPos[1] - baseCenterY;
       var lenFull = Math.sqrt(dx * dx + dy * dy + dz * dz);
       lenFull = Math.max(lenFull, 0.001);
 
-      lastRobotCollisionTime = currentTime; // Set cooldown timer
+      lastRobotCollisionTime = currentTime;
 
       return {
         collided: true,
@@ -907,7 +905,7 @@ function checkBallRobotCollision() {
     }
   }
 
-  // ===== 2. CHECK UPPER ARM =====
+  // check upper arm
   m = mult(m, translate(0.0, BASE_HEIGHT, 0.0));
   var pShoulder = [m[0][3], m[1][3], m[2][3]];
 
@@ -918,7 +916,7 @@ function checkBallRobotCollision() {
   var upperArmCheck = checkBallCylinderCollision(pShoulder, pElbow, 0.25);
   if (upperArmCheck.collided) return upperArmCheck;
 
-  // ===== 3. CHECK LOWER ARM =====
+  // check lower arm
   var m_lower = mult(m_elbow, rotateZ(theta[LOWER_ARM]));
   var m_wrist = mult(m_lower, translate(0.0, LARM_HEIGHT, 0.0));
   var pWrist = [m_wrist[0][3], m_wrist[1][3], m_wrist[2][3]];
@@ -926,7 +924,7 @@ function checkBallRobotCollision() {
   var lowerArmCheck = checkBallCylinderCollision(pElbow, pWrist, 0.25);
   if (lowerArmCheck.collided) return lowerArmCheck;
 
-  // ===== 4. CHECK WRIST SPHERE =====
+  // check wrist
   dx = ballCurrentPos[0] - pWrist[0];
   dy = ballCurrentPos[1] - pWrist[1];
   dz = ballCurrentPos[2] - pWrist[2];
@@ -943,7 +941,7 @@ function checkBallRobotCollision() {
   return { collided: false };
 }
 
-// Helper: Check ball collision with cylindrical arm segment
+// helper function to check ball collision with cylinder arm segment
 function checkBallCylinderCollision(pStart, pEnd, armRadius) {
   // Vector from start to end
   var armX = pEnd[0] - pStart[0];
@@ -1359,8 +1357,7 @@ function getUIElement() {
   );
 }
 
-// Helper: Show Custom Modal
-// takes a title, a message, and a function to run if the user clicks "CONFIRM"
+// show the confirmation modal to user and run the function if user press confirm
 function showCustomConfirm(title, message, onConfirmCallback) {
   const overlay = document.getElementById("custom-modal-overlay");
   const titleEl = document.getElementById("modal-title");
@@ -1368,20 +1365,20 @@ function showCustomConfirm(title, message, onConfirmCallback) {
   const confirmBtn = document.getElementById("modal-confirm-btn");
   const cancelBtn = document.getElementById("modal-cancel-btn");
 
-  // Set content
+  // set content
   titleEl.innerText = title;
-  msgEl.innerHTML = message.replace(/\n/g, "<br>"); // Handle line breaks
+  msgEl.innerHTML = message.replace(/\n/g, "<br>"); 
 
-  // Show modal
+  // show modal
   overlay.classList.remove("hidden");
   overlay.classList.add("active");
 
-  // Define cleanup function to remove listeners and hide modal
+  // define cleanup function to remove listeners and hide modal
   function closeAndCleanup() {
     overlay.classList.remove("active");
     setTimeout(() => overlay.classList.add("hidden"), 300); // wait for animation
 
-    // Remove event listeners to prevent stacking logic
+    // remove event listeners to prevent stacking logic
     confirmBtn.onclick = null;
     cancelBtn.onclick = null;
   }
@@ -1389,38 +1386,38 @@ function showCustomConfirm(title, message, onConfirmCallback) {
   // Handle Confirm Click
   confirmBtn.onclick = function () {
     closeAndCleanup();
-    onConfirmCallback(); // Run the actual game restart logic
+    onConfirmCallback(); // run the functions 
   };
 
   // Handle Cancel Click
   cancelBtn.onclick = function () {
     closeAndCleanup();
-    enableAllButton(); // Re-enable interface if user cancelled
+    enableAllButton(); // enable again the interface if user cancelled
   };
 }
 
-// Helper: Show Game Over Modal
+// game over modal
 function showGameOver(message) {
   const overlay = document.getElementById("game-over-modal");
   const msgEl = document.getElementById("game-over-message");
   const restartBtn = document.getElementById("game-over-btn");
 
-  // Set the failure message
+  // set the failure message
   msgEl.innerText = message;
 
-  // Show modal
+  // show modal
   overlay.classList.remove("hidden");
   overlay.classList.add("active");
 
-  // Handle Restart Click
+  // handle Restart Click
   restartBtn.onclick = function () {
     overlay.classList.remove("active");
     overlay.classList.add("hidden");
 
-    // Reset the game
-    gameScore = 0; // Reset score on failure
-    isGameActive = false; // CRITICAL: Re-enable game state
-    ballWasReleased = false; // Reset release flag
+    // reset the game
+    gameScore = 0; // Reset score after game over
+    isGameActive = false;
+    ballWasReleased = false; 
 
     restartGame();
 
@@ -2318,24 +2315,23 @@ function releaseBall() {
 function updateBallRolling() {
   if (!ballIsRolling || isBallHeld || isFalling) return;
 
-  // 1. Apply Velocity to Position (X and Z)
-  ballCurrentPos[0] += ballVelocity.x; // Rolling update X
-  ballCurrentPos[2] += ballVelocity.z; // Rolling update Z
+  // apply velocity to x and z
+  ballCurrentPos[0] += ballVelocity.x; // rolling update X
+  ballCurrentPos[2] += ballVelocity.z; // rolling update Z
 
-  // 2. Apply Friction (Slow down both X and Z)
+  // to slow down the ball gradually
   ballVelocity.x *= FRICTION;
   ballVelocity.z *= FRICTION;
 
-  // 3. Check if ball falls off stage
+  // check whether ball falls off stage
   if (!isBallOnStage()) {
 
-    isFalling = true;        // ← Start falling physics
-    ballIsRolling = false;   // ← Stop rolling
-    loseGame = true;         // ← Mark as lost
-    // DON'T call game over here - let it fall first!
+    isFalling = true;
+    ballIsRolling = false; 
+    loseGame = true; // game lost
   }
 
-  // 4. Stop rolling if velocity is very low
+  // stop rolling if velocity is low
   if (Math.abs(ballVelocity.x) < 0.001 && Math.abs(ballVelocity.z) < 0.001) {
 
     ballIsRolling = false;
@@ -2343,7 +2339,7 @@ function updateBallRolling() {
     ballVelocity.z = 0;
   }
 
-  // Update globals
+  // update global variable
   BallPosX = ballCurrentPos[0];
   BallPosY = ballCurrentPos[1];
   BallPosZ = ballCurrentPos[2];
@@ -2485,7 +2481,7 @@ function checkOuterGripperCollision() {
   return distance < minSafeDistance;
 }
 
-// Check if robot arm touches ball (when not held)
+// check if gripper touches ball when the ball is not held
 function checkGripperBallCollision() {
   if (isBallHeld || isFalling || ballIsRolling) return false;
 
@@ -2500,34 +2496,34 @@ function checkGripperBallCollision() {
     (gripZ - ballCurrentPos[2]) ** 2
   );
 
-  // This ensures the arm must visually touch the ball before it moves.
+  // ensures the gripper must visually touch the ball before it moves
   return dist < (ballRadius + 0.4);
 }
 
-// Trigger ball rolling when arm touches it
+// trigger ball rolling when gripper touches it
 function triggerBallRolling() {
   if (ballIsRolling || !isGameActive) return;
 
   ballIsRolling = true;
 
-  // 1. Calculate Vector
+  // calculate vector
   var gripCenterMatrix = mult(wristMatrix, translate(0.0, CLAW_CENTER * 0.5, 0.0));
   var pushDirX = ballCurrentPos[0] - gripCenterMatrix[0][3];
   var pushDirZ = ballCurrentPos[2] - gripCenterMatrix[2][3];
 
-  // 2. Normalize
+  // normalise
   var pushMag = Math.sqrt(pushDirX ** 2 + pushDirZ ** 2);
 
   if (pushMag > 0.01) {
-    var pushStrength = 0.10; // Fixed thrust for the push
+    var pushStrength = 0.10; 
 
-    // Apply normalized direction vector scaled by strength
+    // use normalised direction vector to compute velocity
     ballVelocity.x = (pushDirX / pushMag) * pushStrength;
     ballVelocity.z = (pushDirZ / pushMag) * pushStrength;
-    ballVelocity.y = 0; // No vertical kick when rolling
+    ballVelocity.y = 0; 
   }
 
-  // 3. Start the rolling animation
+  // start the rolling animation
   if (!isFalling && !isAnimationRunning) {
     requestAnimationFrame(draw);
   }
@@ -2714,13 +2710,13 @@ function updateUI() {
 
 // Check if ball is on stage
 function isBallOnStage() {
-  // Calculate horizontal distance from ball to stage center
+  // calculate horizontal distance from ball to stage center
   var distFromCenter = Math.sqrt(
     (ballCurrentPos[0] - ballStageX) ** 2 +
     (ballCurrentPos[2] - ballStageZ) ** 2
   );
 
-  // If the ball gets too close to the edge, we say it's "off" and gravity takes over.
+  // a safe zone here is to prevent the ball from visually floating at the edge of the stage if the ball very close to edge
   var safeZoneRadius = ballStageRadius - 0.5;
 
   return ballCurrentPos[1] >= ballStageY && distFromCenter <= safeZoneRadius;
